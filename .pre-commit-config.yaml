@@ -1,0 +1,9 @@
+# Checks that run before every commit. Turn them on once with: make hooks
+repos:
+  - repo: local
+    hooks:
+      - id: no-api-keys
+        name: block API keys
+        entry: python scripts/check_secrets.py
+        language: python
+        types: [text]
