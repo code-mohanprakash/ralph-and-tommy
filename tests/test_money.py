@@ -61,3 +61,27 @@ def test_a_price_cant_be_compared_with_a_bare_number() -> None:
 )
 def test_prices_print_in_pounds(pence: int, shown: str) -> None:
     assert str(Pence(pence)) == shown
+
+
+@pytest.mark.parametrize(
+    ("text", "pence"), [("13.50", 1350), ("0.05", 5), ("1120", 112_000), ("12.8", 1280)]
+)
+def test_prices_are_read_from_text_exactly(text: str, pence: int) -> None:
+    assert Pence.from_pounds(text) == Pence(pence)
+
+
+def test_a_float_is_refused_even_when_reading_pounds() -> None:
+    with pytest.raises(TypeError):
+        Pence.from_pounds(13.5)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("text", ["13.505", "abc", "", "NaN", "Infinity"])
+def test_text_that_isnt_a_whole_number_of_pence_is_refused(text: str) -> None:
+    # 13.505 would need rounding. Rounding happens in one place only: discounts.
+    with pytest.raises(ValueError):
+        Pence.from_pounds(text)
+
+
+def test_a_negative_price_in_pounds_is_refused() -> None:
+    with pytest.raises(ValueError):
+        Pence.from_pounds("-1.00")
