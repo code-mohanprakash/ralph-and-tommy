@@ -72,3 +72,49 @@ def test_the_final_states_are_the_endings() -> None:
         S.NO_DEAL_POSSIBLE,
         S.NEEDS_HUMAN,
     }
+
+
+# Written out by hand from Fleek's Make an Offer rules, separately from the table in state.py,
+# so a slip in either one shows up as a difference.
+H, SY, BA, SA = A.HUMAN, A.SYSTEM, A.BUYER_AGENT, A.SELLER_AGENT
+EXPECTED = {
+    (S.MATCHED, M.START, SY): S.OPEN,
+    (S.MATCHED, M.FIND_IMPOSSIBLE, SY): S.NO_DEAL_POSSIBLE,
+    (S.OPEN, M.OFFER, BA): S.OFFERED,
+    (S.OPEN, M.WALK_AWAY, BA): S.WALKED_AWAY,
+    (S.OPEN, M.WALK_AWAY, SA): S.WALKED_AWAY,
+    (S.OPEN, M.EXPIRE, SY): S.EXPIRED,
+    (S.OPEN, M.LOSE_LOT, SY): S.LOST_TO_OTHER_BUYER,
+    (S.OPEN, M.ESCALATE, SY): S.NEEDS_HUMAN,
+    (S.OFFERED, M.COUNTER, SA): S.COUNTERED,
+    (S.OFFERED, M.ACCEPT, SA): S.PENDING_APPROVAL,
+    (S.OFFERED, M.WALK_AWAY, BA): S.WALKED_AWAY,
+    (S.OFFERED, M.WALK_AWAY, SA): S.WALKED_AWAY,
+    (S.OFFERED, M.EXPIRE, SY): S.EXPIRED,
+    (S.OFFERED, M.LOSE_LOT, SY): S.LOST_TO_OTHER_BUYER,
+    (S.OFFERED, M.ESCALATE, SY): S.NEEDS_HUMAN,
+    (S.COUNTERED, M.OFFER, BA): S.OFFERED,
+    (S.COUNTERED, M.ACCEPT, BA): S.PENDING_APPROVAL,
+    (S.COUNTERED, M.WALK_AWAY, BA): S.WALKED_AWAY,
+    (S.COUNTERED, M.WALK_AWAY, SA): S.WALKED_AWAY,
+    (S.COUNTERED, M.EXPIRE, SY): S.EXPIRED,
+    (S.COUNTERED, M.LOSE_LOT, SY): S.LOST_TO_OTHER_BUYER,
+    (S.COUNTERED, M.ESCALATE, SY): S.NEEDS_HUMAN,
+    (S.PENDING_APPROVAL, M.APPROVE, H): S.CLOSED,
+    (S.PENDING_APPROVAL, M.APPROVE, SY): S.CLOSED,
+    (S.PENDING_APPROVAL, M.REJECT, H): S.REJECTED_BY_HUMAN,
+    (S.PENDING_APPROVAL, M.EXPIRE, SY): S.EXPIRED,
+}
+EVERY_MOVE = [(state, move, actor) for state in S for move in M for actor in A]
+
+
+@pytest.mark.parametrize(("state", "move", "actor"), EVERY_MOVE)
+def test_every_move_from_every_state_by_every_actor(
+    state: NegotiationState, move: Move, actor: Actor
+) -> None:
+    expected = EXPECTED.get((state, move, actor))
+    if expected is None:
+        with pytest.raises(IllegalMove):
+            next_state(state, move, by=actor)
+    else:
+        assert next_state(state, move, by=actor) is expected
