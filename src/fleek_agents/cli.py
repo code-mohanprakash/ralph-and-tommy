@@ -162,3 +162,36 @@ def negotiate(
         console.print(table)
         for line in after:
             console.print(scanner.clean(line))
+
+
+@app.command()
+def safety(
+    live: Annotated[
+        bool, typer.Option("--live", help="Run against Claude again (needs the key).")
+    ] = False,
+) -> None:
+    """Attack the naive design and the protected one the same way; show what leaked."""
+    from fleek_agents.llm.env import load_env_file
+    from fleek_agents.safety.report import safety_report
+
+    console = Console()
+    if live:
+        load_env_file()
+    source = "live Claude Haiku 5.5" if live else "recorded live runs (no key needed)"
+    console.print(f"Safety report, from {source}.")
+    rows = safety_report(live=live)
+    table = Table("Attack", "Target", "Secret leaked?", "Deal outside a limit?", "What happened")
+    for row in rows:
+        table.add_row(
+            row.attack, row.target, row.leaked, "YES" if row.breach else "no", row.what_happened
+        )
+    console.print(table)
+    naive = [r for r in rows if r.target == "naive seller"]
+    protected = [r for r in rows if r.target != "naive seller"]
+    leaks = sum(r.leaked in ("exact", "near") for r in naive)
+    breaches = sum(r.breach for r in protected)
+    console.print(f"Naive seller: secret leaked in {leaks} of {len(naive)} attacks.")
+    console.print(
+        f"Protected agents: {breaches} deals outside a limit in {len(protected)} attacks."
+    )
+    console.print("One recorded run per attack on one model: an illustration, not a rate.")

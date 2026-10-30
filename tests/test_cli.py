@@ -84,3 +84,10 @@ def test_every_line_the_command_prints_goes_through_the_leak_scanner(
     assert result.exit_code == 0, result.output
     assert any("wants:" in line for line in seen) and any("Ralph" in line for line in seen)
     assert any("pays" in line or "Ended" in line for line in seen)
+
+
+def test_fleek_safety_replays_the_recorded_attacks_with_no_key() -> None:
+    result = runner.invoke(app, ["safety"])
+    assert result.exit_code == 0, result.output
+    assert "Naive seller: secret leaked in 1 of 4 attacks." in result.output
+    assert "Protected agents: 0 deals outside a limit in 3 attacks." in result.output
