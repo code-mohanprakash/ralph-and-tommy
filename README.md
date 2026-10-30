@@ -49,6 +49,7 @@ To run Claude live, put an Anthropic key in `.env` (copy `.env.example`) and add
 | [Results](docs/EVALS.md) | Scripted vs Claude Haiku 5.5 vs Claude Sonnet 5.5: deals, prices, cost |
 | [Scale and rollout](docs/SCALE_AND_ROLLOUT.md) | What changes at 50,000 buyers, cost per negotiation, a rollout with stop rules |
 | [AI log](docs/AI_LOG.md) | How Claude was used to build this: where it helped, where it got in the way, what it cost |
+| [Limits and evidence](docs/LIMITS.md) | Each claim and the test behind it; what this doesn't show |
 | [Decision 001](docs/decisions/001-secrets-never-enter-the-model.md) | Why the secret limits never enter the model |
 | [Decision 002](docs/decisions/002-no-vector-database-yet.md) | Why ranking uses NumPy, not a vector database |
 

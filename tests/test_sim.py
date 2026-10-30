@@ -1,3 +1,7 @@
+from pathlib import Path
+
+import pytest
+
 from fleek_agents.agents.scripted import ScriptedRalph, ScriptedTommy
 from fleek_agents.domain.state import NegotiationState
 from fleek_agents.evals.sim import simulate
@@ -7,6 +11,7 @@ from fleek_agents.vault.seed import generate_mandates
 MARKET = generate_market(seed=2026)
 SECRETS = generate_mandates(MARKET, seed=2026)
 BUYERS = [w.buyer_id for w in MARKET.wants[:100]]
+RECORDINGS = Path(__file__).parent.parent / "src/fleek_agents/evals/recordings"
 
 
 def test_a_scripted_simulation_measures_every_buyer() -> None:
@@ -51,3 +56,22 @@ def test_the_recorded_sonnet_run_replays_with_the_same_results() -> None:
     )
     assert result.exit_code == 0, result.output
     assert "9 (90%)" in result.output and "11.0%" in result.output and "7.70¢" in result.output
+
+
+@pytest.mark.parametrize(("model", "buyers"), [("claude-haiku-5-5", 30), ("claude-sonnet-5-5", 10)])
+def test_every_recorded_claude_deal_is_inside_both_limits(model: str, buyers: int) -> None:
+    from fleek_agents.agents.claude import ClaudeAgent
+    from fleek_agents.llm.replay import ReplayClient
+
+    client = ReplayClient(RECORDINGS / f"{model}_{buyers}.jsonl")
+    summary = simulate(
+        MARKET,
+        SECRETS,
+        [w.buyer_id for w in MARKET.wants[:buyers]],
+        agents=model,
+        ralph=lambda: ClaudeAgent(client, model=model, prompt="ralph"),
+        tommy=lambda: ClaudeAgent(client, model=model, prompt="tommy"),
+    )
+    assert summary.deals
+    for r in summary.deals:
+        assert r.buyer_gain >= 0 and r.seller_gain >= 0, r.buyer_id
