@@ -25,3 +25,8 @@ def negotiations_between(session: Session, buyer_id: str, lot_id: str) -> list[s
 def next_negotiation_id(session: Session) -> str:
     count = session.scalar(select(func.count()).select_from(PairingRow)) or 0
     return f"neg-{count + 1:04d}"
+
+
+def lot_of(session: Session, negotiation_id: str) -> str | None:
+    row = session.get(PairingRow, negotiation_id)
+    return row.lot_id if row else None

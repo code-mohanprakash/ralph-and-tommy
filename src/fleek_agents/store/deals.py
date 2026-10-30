@@ -85,3 +85,12 @@ def accept(
     except BaseException:
         session.rollback()  # nothing half-done: no stock taken, no events saved
         raise
+
+
+def give_back(session: Session, lot_id: str, *, bundles: int) -> None:
+    """Put bundles back on sale. Part of the caller's transaction: it doesn't commit."""
+    session.execute(
+        update(StockRow)
+        .where(StockRow.lot_id == lot_id)
+        .values(available=StockRow.available + bundles)
+    )
