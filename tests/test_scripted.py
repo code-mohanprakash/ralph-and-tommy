@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from fleek_agents.agents.base import Accept, View
 from fleek_agents.agents.scripted import ScriptedRalph, ScriptedTommy
 from fleek_agents.config import Settings
+from fleek_agents.domain.events import EscalationReason
 from fleek_agents.domain.models import Lot, Seller, Want
 from fleek_agents.domain.money import Pence
 from fleek_agents.domain.state import NegotiationState
@@ -202,4 +203,5 @@ def test_the_harness_refuses_an_accept_outside_a_limit() -> None:
         settings=SETTINGS,
     )
     assert state is S.NEEDS_HUMAN  # handed to a person, not sold below the floor
+    assert log.saved(nid).escalated_because is EscalationReason.ACCEPT_OUTSIDE_LIMIT
     assert all(e.move != "accept" for e in log.read(nid))

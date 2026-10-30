@@ -1,5 +1,6 @@
 """An event: one move in one negotiation, as it gets written to the log."""
 
+from enum import StrEnum
 from typing import Annotated, Self
 
 from pydantic import AwareDatetime, Field, StrictInt, model_validator
@@ -7,6 +8,16 @@ from pydantic import AwareDatetime, Field, StrictInt, model_validator
 from fleek_agents.domain.models import DomainModel
 from fleek_agents.domain.offers import NegotiationId, OfferCard, Role
 from fleek_agents.domain.state import Actor, IllegalMove, Move, NegotiationState, next_state
+
+
+class EscalationReason(StrEnum):
+    """Why a negotiation was handed to a person. A fixed list, like reason codes on a card."""
+
+    MODEL_REFUSED = "model_refused"
+    TOO_MANY_CORRECTIONS = "too_many_corrections"
+    SPEND_CAP = "spend_cap"
+    ACCEPT_OUTSIDE_LIMIT = "accept_outside_limit"  # an agent tried to accept past a secret limit
+
 
 # The moves that carry an offer card, and whose card it must be.
 CARD_FROM = {Move.OFFER: Role.BUYER, Move.COUNTER: Role.SELLER}
@@ -21,9 +32,12 @@ class Event(DomainModel):
     from_state: NegotiationState
     to_state: NegotiationState
     card: OfferCard | None = None
+    reason: EscalationReason | None = None  # escalations only
 
     @model_validator(mode="after")
     def _fits_the_rules(self) -> Self:
+        if (self.move is Move.ESCALATE) != (self.reason is not None):
+            raise ValueError("An escalation needs a reason, and only an escalation has one")
         try:
             expected = next_state(self.from_state, self.move, by=self.by)
         except IllegalMove as error:

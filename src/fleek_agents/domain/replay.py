@@ -9,7 +9,7 @@ from typing import Annotated
 
 from pydantic import AwareDatetime, Field, StrictInt
 
-from fleek_agents.domain.events import Event
+from fleek_agents.domain.events import EscalationReason, Event
 from fleek_agents.domain.models import DomainModel
 from fleek_agents.domain.offers import NegotiationId, OfferCard
 from fleek_agents.domain.state import Move, NegotiationState
@@ -25,6 +25,7 @@ class Snapshot(DomainModel):
     last_offer: OfferCard | None = None  # the buyer's latest card
     last_counter: OfferCard | None = None  # the seller's latest card
     agreed: OfferCard | None = None  # the card that was accepted, once one is
+    escalated_because: EscalationReason | None = None
     updated_at: AwareDatetime | None = None
 
 
@@ -47,6 +48,8 @@ def apply(snapshot: Snapshot, event: Event) -> Snapshot:
         changes["last_counter"] = event.card
     if event.card is not None:
         changes["cards"] = snapshot.cards + 1
+    if event.reason is not None:
+        changes["escalated_because"] = event.reason
     if event.move is Move.ACCEPT:  # the other side's card that was on the table
         on_table = {
             NegotiationState.OFFERED: snapshot.last_offer,

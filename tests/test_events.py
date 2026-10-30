@@ -8,7 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from fleek_agents.domain.events import CARD_FROM
+from fleek_agents.domain.events import CARD_FROM, EscalationReason
 from fleek_agents.domain.offers import OfferCard
 from fleek_agents.domain.replay import replay
 from fleek_agents.domain.state import ALLOWED, Actor, IllegalMove, Move, NegotiationState
@@ -153,7 +153,15 @@ def _random_walk(log: EventLog, negotiation_id: str, rng: random.Random) -> None
         move, actor = rng.choice(options)
         role = CARD_FROM.get(move)
         the_card = card(role.value, rng.randint(500, 2000), negotiation_id) if role else None
-        log.append(negotiation_id, move, by=actor, at=T0 + timedelta(minutes=step), card=the_card)
+        reason = rng.choice(list(EscalationReason)) if move is M.ESCALATE else None
+        log.append(
+            negotiation_id,
+            move,
+            by=actor,
+            at=T0 + timedelta(minutes=step),
+            card=the_card,
+            reason=reason,
+        )
 
 
 def test_saved_state_matches_replay_after_300_random_negotiations(log: EventLog) -> None:
