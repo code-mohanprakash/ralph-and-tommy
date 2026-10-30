@@ -106,3 +106,21 @@ def test_a_discount_rounds_half_a_penny_up(pence: int, percent: int, expected: i
 def test_a_discount_must_be_a_whole_percent_from_0_to_100(bad: object) -> None:
     with pytest.raises((TypeError, ValueError)):
         Pence(1350).discounted(bad)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("pence", "percent", "share"), [(158_300, 2, 3166), (125, 2, 3), (124, 2, 2)]
+)
+def test_a_percentage_of_a_price_rounds_half_a_penny_up(
+    pence: int, percent: int, share: int
+) -> None:
+    assert Pence(pence).percent(percent) == Pence(share)
+
+
+def test_prices_subtract() -> None:
+    assert Pence(1350) - Pence(300) == Pence(1050)
+
+
+def test_subtracting_more_than_there_is_fails() -> None:
+    with pytest.raises(ValueError):
+        Pence(100) - Pence(101)
