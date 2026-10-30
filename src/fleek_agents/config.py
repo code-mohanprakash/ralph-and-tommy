@@ -74,6 +74,15 @@ class Spending(BaseModel):
     prices: dict[str, ModelPrice] = Field(default_factory=lambda: dict(DEFAULT_PRICES))
 
 
+class ApprovalRules(BaseModel):
+    """When an agreed deal waits for a person instead of closing on its own."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    person_at_or_above_pence: Annotated[StrictInt, Field(gt=0)] = 150_000  # £1,500
+    first_deals_by_person: Annotated[StrictInt, Field(ge=0)] = 3
+
+
 class Settings(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -81,6 +90,7 @@ class Settings(BaseModel):
     negotiation: NegotiationRules = NegotiationRules()
     models: ModelRouting = ModelRouting()
     spending: Spending = Spending()
+    approval: ApprovalRules = ApprovalRules()
 
 
 def load_settings(path: Path = Path("market.toml")) -> Settings:

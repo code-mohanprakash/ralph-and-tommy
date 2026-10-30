@@ -38,3 +38,9 @@ output_cents_per_mtok = 1000
 [spending.prices.claude-opus-5-5]
 input_cents_per_mtok = 400
 output_cents_per_mtok = 2000
+
+[approval]
+# An agreed deal waits for a person if it costs the buyer this much or more (whole pence)...
+person_at_or_above_pence = 150000
+# ...or if it's one of the buyer's first deals. Otherwise the rule approves it.
+first_deals_by_person = 3

@@ -13,9 +13,8 @@ from fleek_agents.domain.events import Event
 from fleek_agents.domain.offers import OfferCard, Role, Terms
 from fleek_agents.domain.state import Actor, Move, NegotiationState
 from fleek_agents.orchestrator.clock import Clock
-from fleek_agents.store.deals import give_back
+from fleek_agents.store.deals import give_back_agreed
 from fleek_agents.store.events import EventLog
-from fleek_agents.store.pairings import lot_of
 
 SIDES = {
     Actor.BUYER_AGENT: (Role.BUYER, Move.OFFER),
@@ -89,11 +88,11 @@ def expire_due(
             log.stage(negotiation_id, Move.EXPIRE, by=Actor.SYSTEM, at=now)
             if snap.state is NegotiationState.PENDING_APPROVAL:
                 # The stock was taken at accept. An expired approval puts it back on sale.
-                lot_id = lot_of(log.session, negotiation_id)
-                if lot_id is None or snap.agreed is None:
+                try:
+                    give_back_agreed(log, negotiation_id)
+                except ValueError:
                     log.session.rollback()
-                    raise ValueError(f"{negotiation_id} is waiting for approval with no lot")
-                give_back(log.session, lot_id, bundles=snap.agreed.bundles)
+                    raise
             log.session.commit()  # the expiry and the stock, or neither
             expired.append(negotiation_id)
     return expired
