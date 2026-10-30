@@ -2,14 +2,16 @@ from collections import Counter
 from dataclasses import fields
 from datetime import UTC, datetime
 
+import pytest
 from sqlalchemy.orm import Session
 
-from fleek_agents.agents.base import Accept, View
+from fleek_agents.agents.base import Accept, Send, View
 from fleek_agents.agents.scripted import ScriptedRalph, ScriptedTommy
 from fleek_agents.config import Settings
 from fleek_agents.domain.events import EscalationReason
 from fleek_agents.domain.models import Lot, Seller, Want
 from fleek_agents.domain.money import Pence
+from fleek_agents.domain.offers import Terms
 from fleek_agents.domain.state import NegotiationState
 from fleek_agents.market.seed import generate_market
 from fleek_agents.matching.funnel import bundles_for, possible_deals
@@ -207,3 +209,52 @@ def test_the_harness_refuses_an_accept_outside_a_limit() -> None:
     assert state is S.NEEDS_HUMAN  # handed to a person, not sold below the floor
     assert log.saved(nid).escalated_because is EscalationReason.ACCEPT_OUTSIDE_LIMIT
     assert all(e.move != "accept" for e in log.read(nid))
+
+
+class OverpayingRalph:
+    """Offers far above any sensible price: what a manipulated agent might do."""
+
+    def decide(self, view: View) -> Send:
+        return Send(
+            terms=Terms(base_price=Pence(99_900), bundles=1, prepaid=False, ship_by=view.today)
+        )
+
+
+class UnderselingTommy:
+    """Counters at 1p: below any floor."""
+
+    def decide(self, view: View) -> Send:
+        return Send(terms=Terms(base_price=Pence(1), bundles=1, prepaid=False, ship_by=view.today))
+
+
+@pytest.mark.parametrize("who", ["buyer", "seller"])
+def test_a_card_past_its_sender_s_own_limit_is_never_sent(who: str) -> None:
+    engine = make_engine("sqlite://")
+    Base.metadata.create_all(engine)
+    session = Session(engine)
+    log, clock = EventLog(session), FakeClock(T0)
+    put_on_sale(session, LOT.id, bundles=1)
+    nid = open_negotiation(
+        log, buyer_id="buyer-0001", lot_id=LOT.id, clock=clock, rules=SETTINGS.negotiation
+    )
+    b, s = limits(max_pence=1600, floor_pence=950)
+    ralph = OverpayingRalph() if who == "buyer" else ScriptedRalph()
+    tommy = UnderselingTommy() if who == "seller" else ScriptedTommy()
+    state = run_negotiation(
+        log,
+        nid,
+        lot=LOT,
+        seller=SELLER,
+        want=WANT,
+        bundles=1,
+        buyer_limit=b,
+        seller_limit=s,
+        ralph=ralph,
+        tommy=tommy,
+        clock=clock,
+        settings=SETTINGS,
+    )
+    assert state is S.NEEDS_HUMAN
+    assert log.saved(nid).escalated_because is EscalationReason.CARD_OUTSIDE_LIMIT
+    sent = [e.card.base_price for e in log.read(nid) if e.card is not None]
+    assert Pence(99_900) not in sent and Pence(1) not in sent

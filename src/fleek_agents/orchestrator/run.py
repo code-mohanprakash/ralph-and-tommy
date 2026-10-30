@@ -24,7 +24,7 @@ from fleek_agents.orchestrator.rounds import send_card
 from fleek_agents.store.deals import accept
 from fleek_agents.store.events import EventLog
 from fleek_agents.vault.bands import buyer_band, seller_band
-from fleek_agents.vault.checks import can_accept
+from fleek_agents.vault.checks import buyer_ok, can_accept, seller_ok
 from fleek_agents.vault.mandate import BuyerMandate, SellerMandate
 
 THINKING = timedelta(hours=1)  # simulated time between turns
@@ -57,6 +57,16 @@ class Deal:
     tommy: Agent
     within_budget: Callable[[Pence], bool] = lambda _: True
     elsewhere: Callable[[], tuple[str, ...]] = lambda: ()  # the buyer's other open deals
+
+
+def _inside_own_limit(action: Send, deal: Deal, buyers_turn: bool) -> bool:
+    terms, lot = action.terms, deal.lot
+    pieces = terms.bundles * lot.pieces
+    if buyers_turn:
+        return buyer_ok(
+            deal.buyer_limit, base_price=terms.base_price, shipping=lot.shipping, pieces=pieces
+        )
+    return seller_ok(deal.seller_limit, base_price=terms.base_price, pieces=pieces)
 
 
 def take_step(log: EventLog, deal: Deal, *, clock: FakeClock, settings: Settings) -> bool:
@@ -107,6 +117,15 @@ def take_step(log: EventLog, deal: Deal, *, clock: FakeClock, settings: Settings
             by=Actor.SYSTEM,
             at=clock.now(),
             reason=EscalationReason.OVER_BUDGET,
+        )
+    elif isinstance(action, Send) and not _inside_own_limit(action, deal, buyers_turn):
+        # A card is binding: one past its sender's own limit is never put on the table.
+        log.append(
+            negotiation_id,
+            Move.ESCALATE,
+            by=Actor.SYSTEM,
+            at=clock.now(),
+            reason=EscalationReason.CARD_OUTSIDE_LIMIT,
         )
     elif isinstance(action, Send):
         send_card(log, negotiation_id, by=actor, terms=action.terms, clock=clock, rules=rules)
