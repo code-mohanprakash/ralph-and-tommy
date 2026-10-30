@@ -20,3 +20,21 @@ big_deal_pence = 100000
 big_deal_model = "claude-sonnet-5-5"
 small_deal_model = "claude-haiku-5-5"
 digest_model = "claude-opus-5-5"
+
+[spending]
+# Caps on AI cost, in US cents. A call that could break either cap is never made.
+negotiation_cap_cents = 25
+run_cap_cents = 500
+
+# Anthropic list prices, US cents per million tokens (checked 30 Oct 2026).
+[spending.prices.claude-haiku-5-5]
+input_cents_per_mtok = 10
+output_cents_per_mtok = 50
+
+[spending.prices.claude-sonnet-5-5]
+input_cents_per_mtok = 200
+output_cents_per_mtok = 1000
+
+[spending.prices.claude-opus-5-5]
+input_cents_per_mtok = 400
+output_cents_per_mtok = 2000

@@ -48,12 +48,39 @@ class ModelRouting(BaseModel):
     digest_model: str = "claude-opus-5-5"  # the account manager's daily summary
 
 
+class ModelPrice(BaseModel):
+    """Anthropic's list price, in US cents per million tokens."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    input_cents_per_mtok: Annotated[StrictInt, Field(ge=0)]
+    output_cents_per_mtok: Annotated[StrictInt, Field(ge=0)]
+
+
+DEFAULT_PRICES = {
+    "claude-haiku-5-5": ModelPrice(input_cents_per_mtok=10, output_cents_per_mtok=50),
+    "claude-sonnet-5-5": ModelPrice(input_cents_per_mtok=200, output_cents_per_mtok=1000),
+    "claude-opus-5-5": ModelPrice(input_cents_per_mtok=400, output_cents_per_mtok=2000),
+}
+
+
+class Spending(BaseModel):
+    """Caps on what the AI may cost, in US cents (Anthropic bills in dollars)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    negotiation_cap_cents: Annotated[StrictInt, Field(gt=0)] = 25
+    run_cap_cents: Annotated[StrictInt, Field(gt=0)] = 500
+    prices: dict[str, ModelPrice] = Field(default_factory=lambda: dict(DEFAULT_PRICES))
+
+
 class Settings(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     bands: BandThresholds = BandThresholds()
     negotiation: NegotiationRules = NegotiationRules()
     models: ModelRouting = ModelRouting()
+    spending: Spending = Spending()
 
 
 def load_settings(path: Path = Path("market.toml")) -> Settings:

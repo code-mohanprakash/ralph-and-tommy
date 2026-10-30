@@ -15,6 +15,7 @@ from anthropic.types.beta import BetaMessage
 from pydantic import BaseModel, ValidationError
 
 from fleek_agents.harness.schemas import strict_schema
+from fleek_agents.llm.budget import SpendCapReached
 from fleek_agents.llm.client import LLMClient
 
 NEED_ONE_ACTION = "End your turn with exactly one action tool call, and nothing else alongside it."
@@ -45,6 +46,7 @@ class Outcome(StrEnum):
     ACTION = "action"
     NEEDS_HUMAN = "needs_human"  # too many corrections
     REFUSED = "refused"  # the model declined
+    SPEND_CAP = "spend_cap"  # the next call could break a spend cap; a person takes over
 
 
 @dataclass
@@ -89,15 +91,19 @@ def take_turn(
         return True
 
     while True:
-        response: BetaMessage = client.create(
-            model=model,
-            max_tokens=max_tokens,
-            system=system,
-            messages=messages,
-            tools=[t.definition() for t in tools],
-            tool_choice={"type": "auto"},
-            output_config={"effort": effort},
-        )
+        try:
+            response: BetaMessage = client.create(
+                model=model,
+                max_tokens=max_tokens,
+                system=system,
+                messages=messages,
+                tools=[t.definition() for t in tools],
+                tool_choice={"type": "auto"},
+                output_config={"effort": effort},
+            )
+        except SpendCapReached:
+            result.outcome = Outcome.SPEND_CAP
+            return result
         result.calls += 1
         result.input_tokens += response.usage.input_tokens
         result.output_tokens += response.usage.output_tokens
