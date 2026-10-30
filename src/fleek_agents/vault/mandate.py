@@ -13,6 +13,7 @@ from fleek_agents.vault.secret import SecretMoney
 class BuyerMandate:
     buyer_id: str
     max_per_piece: SecretMoney  # the most they'll pay per piece, delivered
+    budget: SecretMoney | None = None  # the most across all their deals at once; None = no limit
 
 
 @dataclass(frozen=True, slots=True, eq=False)

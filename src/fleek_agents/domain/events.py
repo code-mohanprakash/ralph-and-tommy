@@ -17,6 +17,7 @@ class EscalationReason(StrEnum):
     TOO_MANY_CORRECTIONS = "too_many_corrections"
     SPEND_CAP = "spend_cap"
     ACCEPT_OUTSIDE_LIMIT = "accept_outside_limit"  # an agent tried to accept past a secret limit
+    OVER_BUDGET = "over_budget"  # the move would take the buyer past their budget across deals
 
 
 # The moves that carry an offer card, and whose card it must be.

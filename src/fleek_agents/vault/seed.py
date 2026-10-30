@@ -23,18 +23,18 @@ def _typical_delivered(category: str) -> float:
 
 
 def generate_mandates(market: Market, seed: int) -> Secrets:
-    """Buyers' maxes spread around their category's typical delivered price per piece; each
+    """Buyers' maxes spread around their category's typical delivered price per piece, and a
+    budget of that max times the pieces they want; each
     lot's floor somewhere below what the seller would net at the listed price."""
     rng = Random(f"mandates-{seed}")  # its own stream, so the market doesn't shift it
-    buyers = {
-        want.buyer_id: BuyerMandate(
+    buyers = {}
+    for want in market.wants:
+        max_per_piece = Pence(round(_typical_delivered(want.category) * rng.uniform(0.75, 1.35)))
+        buyers[want.buyer_id] = BuyerMandate(
             buyer_id=want.buyer_id,
-            max_per_piece=SecretMoney(
-                Pence(round(_typical_delivered(want.category) * rng.uniform(0.75, 1.35)))
-            ),
+            max_per_piece=SecretMoney(max_per_piece),
+            budget=SecretMoney(max_per_piece.times(want.pieces)),  # enough for what they want
         )
-        for want in market.wants
-    }
     lots = {
         lot.id: SellerMandate(
             seller_id=lot.seller_id,

@@ -36,3 +36,8 @@ def negotiations_between(session: Session, buyer_id: str, lot_id: str) -> list[s
 def lot_of(session: Session, negotiation_id: str) -> str | None:
     query = select(PairingRow.lot_id).where(PairingRow.negotiation_id == negotiation_id)
     return session.scalars(query).first()
+
+
+def negotiations_of(session: Session, buyer_id: str) -> list[str]:
+    query = select(PairingRow.negotiation_id).where(PairingRow.buyer_id == buyer_id)
+    return [n for n in session.scalars(query) if n is not None]
