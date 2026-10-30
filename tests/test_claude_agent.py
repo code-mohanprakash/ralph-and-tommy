@@ -91,3 +91,43 @@ def test_claude_ralph_closes_a_deal_with_scripted_tommy_inside_both_limits() -> 
     assert can_accept(
         buyer_limit, seller_limit, base_price=agreed.base_price, shipping=LOT.shipping, pieces=50
     )
+
+
+def test_claude_ralph_and_claude_tommy_close_inside_both_limits() -> None:
+    load_env_file(Path(__file__).parents[1] / ".env")
+    engine = make_engine("sqlite://")
+    Base.metadata.create_all(engine)
+    session = Session(engine)
+    log, clock, settings = EventLog(session), FakeClock(T0), Settings()
+    put_on_sale(session, LOT.id, bundles=1)
+    nid = open_negotiation(
+        log, buyer_id="buyer-0001", lot_id=LOT.id, clock=clock, rules=settings.negotiation
+    )
+    buyer_limit, seller_limit = limits(max_pence=1600, floor_pence=950)
+    client = cassette_client(CASSETTES / "ralph_vs_tommy.jsonl")
+    ralph = ClaudeAgent(client, model="claude-haiku-5-5", prompt="ralph")
+    tommy = ClaudeAgent(client, model="claude-haiku-5-5", prompt="tommy")
+    state = run_negotiation(
+        log,
+        nid,
+        lot=LOT,
+        seller=SELLER,
+        want=WANT,
+        bundles=1,
+        buyer_limit=buyer_limit,
+        seller_limit=seller_limit,
+        ralph=ralph,
+        tommy=tommy,
+        clock=clock,
+        settings=settings,
+    )
+    cards = [e.card for e in log.read(nid) if e.card is not None]
+    print("\n" + " | ".join(f"{c.from_role} {c.base_price}" for c in cards), "->", state)
+    turns = ralph.turns + tommy.turns
+    print(f"{sum(t.calls for t in turns)} calls, {sum(t.input_tokens for t in turns)} input tokens")
+    assert state is NegotiationState.PENDING_APPROVAL
+    agreed = log.saved(nid).agreed
+    assert agreed is not None
+    assert can_accept(
+        buyer_limit, seller_limit, base_price=agreed.base_price, shipping=LOT.shipping, pieces=50
+    )
