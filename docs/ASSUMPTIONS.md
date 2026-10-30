@@ -75,7 +75,8 @@ Expect these to be challenged. None of them has been checked with Fleek's real d
 | 8 | Buyers allow automatic deals **only after approving a few themselves**. | sends a buyer's first 3 deals, and any deal over £1,500, to the buyer for approval. | The thresholds are settings. |
 | 9 | **Account managers' time** is today's bottleneck. | gives them a short call list of near misses, ranked, and a queue of deals waiting for approval. | The list is cheap to make, so it stays useful. |
 | 10 | Fleek earns **a fixed commission** and never profits from the gap between the buyer's maximum and the seller's floor. | never uses that gap. The gain from each deal is split between buyer and seller and reported. | If Fleek took a spread, both sides would need to be told, or trust breaks. |
-| 11 | A seller's floor means what they **receive after Fleek's 15% commission**. | accepts only if base price × 0.85 is at or above the floor. | If the floor means the listed price, the check drops the 0.85. One line. |
+| 11 | A seller's floor means what they **receive after Fleek's 15% commission**. | accepts only if the seller's payout after commission is at least the floor for every piece. | If the floor means the listed price, the check uses the price before commission. One line. |
+| 12 | The 2% buyer protection fee is on **the whole order, shipping included**, once per order. | adds it to what the buyer pays before checking their maximum. | If it's on the base price only, the fee is a little smaller. One line. |
 
 ## Scaled down for the build
 
