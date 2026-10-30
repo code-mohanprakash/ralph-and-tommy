@@ -10,7 +10,7 @@ from typing import Any
 from sqlalchemy import Connection, String, Text, UniqueConstraint, event, select
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
-from fleek_agents.domain.events import Event
+from fleek_agents.domain.events import EscalationReason, Event
 from fleek_agents.domain.offers import OfferCard
 from fleek_agents.domain.replay import Snapshot, apply
 from fleek_agents.domain.state import Actor, Move, NegotiationState, next_state
@@ -81,9 +81,10 @@ class EventLog:
         by: Actor,
         at: datetime,
         card: OfferCard | None = None,
+        reason: EscalationReason | None = None,
     ) -> Event:
         """Save one move and the new snapshot together, if the rules allow the move."""
-        event = self.stage(negotiation_id, move, by=by, at=at, card=card)
+        event = self.stage(negotiation_id, move, by=by, at=at, card=card, reason=reason)
         self._session.commit()  # both rows, or neither
         return event
 
@@ -95,6 +96,7 @@ class EventLog:
         by: Actor,
         at: datetime,
         card: OfferCard | None = None,
+        reason: EscalationReason | None = None,
     ) -> Event:
         """Like append, but leave the commit to the caller, to group several moves."""
         before = self.saved(negotiation_id)
@@ -107,6 +109,7 @@ class EventLog:
             from_state=before.state,
             to_state=next_state(before.state, move, by=by),  # raises IllegalMove
             card=card,
+            reason=reason,
         )
         after = apply(before, event)
         self._session.add(
