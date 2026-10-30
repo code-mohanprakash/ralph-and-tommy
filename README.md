@@ -18,7 +18,8 @@ make hooks   # once: scan for API keys before every commit
 make check
 ```
 
-`make check` runs ruff (lint and format), mypy (strict types), pytest, and the API key scan.
+`make check` runs ruff (lint and format), mypy (strict types), pytest, and the API key scan. CI runs
+the same `make check` on every pull request.
 
 ## Your API key
 
