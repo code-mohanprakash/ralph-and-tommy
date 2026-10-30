@@ -1,3 +1,4 @@
+import random
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -7,8 +8,10 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from fleek_agents.domain.events import CARD_FROM
 from fleek_agents.domain.offers import OfferCard
-from fleek_agents.domain.state import Actor, IllegalMove, Move, NegotiationState
+from fleek_agents.domain.replay import replay
+from fleek_agents.domain.state import ALLOWED, Actor, IllegalMove, Move, NegotiationState
 from fleek_agents.store.db import Base, make_engine
 from fleek_agents.store.events import EventLog
 
@@ -120,3 +123,63 @@ def test_two_writers_cant_both_save_the_same_event_number(log: EventLog) -> None
             )
         )
     log._session.rollback()
+
+
+def test_the_saved_state_matches_a_replay_of_the_log(log: EventLog) -> None:
+    log.append("neg-0001", M.START, by=A.SYSTEM, at=T0)
+    log.append("neg-0001", M.OFFER, by=A.BUYER_AGENT, at=T0, card=card("buyer", 1150))
+    log.append("neg-0001", M.COUNTER, by=A.SELLER_AGENT, at=T0, card=card("seller", 1300))
+    saved = log.saved("neg-0001")
+    assert saved.state is S.COUNTERED
+    assert saved.last_counter == card("seller", 1300)
+    assert saved == replay("neg-0001", log.read("neg-0001"))
+
+
+def test_an_unknown_negotiation_has_a_fresh_snapshot(log: EventLog) -> None:
+    assert log.saved("neg-0009") == replay("neg-0009", [])
+
+
+def _random_walk(log: EventLog, negotiation_id: str, rng: random.Random) -> None:
+    for step in range(rng.randint(1, 12)):
+        state = log.state(negotiation_id)
+        options = [
+            (move, actor)
+            for (s, move), (_, actors) in ALLOWED.items()
+            if s is state
+            for actor in sorted(actors)
+        ]
+        if not options:
+            return  # an ending
+        move, actor = rng.choice(options)
+        role = CARD_FROM.get(move)
+        the_card = card(role.value, rng.randint(500, 2000), negotiation_id) if role else None
+        log.append(negotiation_id, move, by=actor, at=T0 + timedelta(minutes=step), card=the_card)
+
+
+def test_saved_state_matches_replay_after_300_random_negotiations(log: EventLog) -> None:
+    rng = random.Random(30)  # fixed seed: the same 300 negotiations every run
+    for n in range(300):
+        negotiation_id = f"neg-{n:04d}"
+        _random_walk(log, negotiation_id, rng)
+        assert log.saved(negotiation_id) == replay(negotiation_id, log.read(negotiation_id))
+
+
+def test_when_two_writers_race_the_loser_saves_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    engine = make_engine(f"sqlite:///{tmp_path / 'race.db'}")
+    Base.metadata.create_all(engine)
+    with Session(engine) as one, Session(engine) as two:
+        first, second = EventLog(one), EventLog(two)
+        first.append("neg-0001", M.START, by=A.SYSTEM, at=T0)
+        # The race: the second writer reads the state, then the first writer saves event 2
+        # before the second one writes. The second is now acting on an out-of-date snapshot.
+        stale = second.saved("neg-0001")
+        first.append("neg-0001", M.OFFER, by=A.BUYER_AGENT, at=T0, card=card("buyer", 1150))
+        monkeypatch.setattr(second, "saved", lambda _negotiation_id: stale)
+        with pytest.raises(IntegrityError):  # it also tries to save event 2
+            second.append("neg-0001", M.WALK_AWAY, by=A.SELLER_AGENT, at=T0)
+        two.rollback()
+        monkeypatch.undo()
+        assert second.state("neg-0001") is S.OFFERED  # the first writer's move stands
+        assert second.saved("neg-0001") == replay("neg-0001", second.read("neg-0001"))
