@@ -3,6 +3,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
+from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from fleek_agents.domain.offers import OfferCard
@@ -90,3 +92,31 @@ def test_negotiations_have_separate_histories(log: EventLog) -> None:
     assert log.state("neg-0001") is S.OPEN
     assert log.state("neg-0002") is S.NO_DEAL_POSSIBLE
     assert log.read("neg-0002")[0].seq == 1
+
+
+def test_the_database_refuses_to_edit_an_event(log: EventLog) -> None:
+    log.append("neg-0001", M.START, by=A.SYSTEM, at=T0)
+    with pytest.raises(IntegrityError, match="append-only"):
+        log._session.execute(text("UPDATE events SET to_state = 'closed'"))
+    log._session.rollback()
+    assert log.state("neg-0001") is S.OPEN
+
+
+def test_the_database_refuses_to_delete_an_event(log: EventLog) -> None:
+    log.append("neg-0001", M.START, by=A.SYSTEM, at=T0)
+    with pytest.raises(IntegrityError, match="append-only"):
+        log._session.execute(text("DELETE FROM events"))
+    log._session.rollback()
+    assert len(log.read("neg-0001")) == 1
+
+
+def test_two_writers_cant_both_save_the_same_event_number(log: EventLog) -> None:
+    log.append("neg-0001", M.START, by=A.SYSTEM, at=T0)
+    with pytest.raises(IntegrityError):
+        log._session.execute(
+            text(
+                "INSERT INTO events (negotiation_id, seq, move, to_state, data) "
+                "VALUES ('neg-0001', 1, 'start', 'open', '{}')"
+            )
+        )
+    log._session.rollback()

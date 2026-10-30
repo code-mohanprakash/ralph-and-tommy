@@ -5,8 +5,9 @@ disagree about what happened.
 """
 
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import String, Text, UniqueConstraint, select
+from sqlalchemy import Connection, String, Text, UniqueConstraint, event, select
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from fleek_agents.domain.events import Event
@@ -26,6 +27,16 @@ class EventRow(Base):
     move: Mapped[str] = mapped_column(String(32))
     to_state: Mapped[str] = mapped_column(String(32))
     data: Mapped[str] = mapped_column(Text)  # the whole event as JSON, exactly as validated
+
+
+@event.listens_for(EventRow.__table__, "after_create")
+def _make_append_only(_table: Any, connection: Connection, **_: Any) -> None:
+    """The database itself refuses to change or remove an event, whatever code asks."""
+    for action in ("UPDATE", "DELETE"):
+        connection.exec_driver_sql(
+            f"CREATE TRIGGER events_no_{action.lower()} BEFORE {action} ON events "
+            "BEGIN SELECT RAISE(ABORT, 'events are append-only'); END"
+        )
 
 
 class EventLog:
