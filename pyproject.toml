@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "Buyer and seller agents that negotiate bulk secondhand-clothing deals, with secret limits kept out of the AI."
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "pydantic>=2.14.2",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -33,6 +35,7 @@ strict = true
 python_version = "3.12"
 files = ["src", "tests", "scripts"]
 mypy_path = "src"
+plugins = ["pydantic.mypy"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
