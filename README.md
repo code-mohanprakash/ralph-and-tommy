@@ -11,6 +11,7 @@ Buyer and seller agents that negotiate bulk secondhand-clothing deals for Fleek.
 Who it's for and what we assume about Fleek's buyers and sellers: [docs/ASSUMPTIONS.md](docs/ASSUMPTIONS.md).
 Why the secret limits never go into the AI: [decision 001](docs/decisions/001-secrets-never-enter-the-model.md).
 Why ranking uses NumPy, not a vector database: [decision 002](docs/decisions/002-no-vector-database-yet.md).
+How well the agents negotiate, and what it costs: [docs/EVALS.md](docs/EVALS.md).
 
 ## Run the checks
 

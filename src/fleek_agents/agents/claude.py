@@ -37,6 +37,7 @@ class ClaudeAgent:
         self, client: LLMClient, *, model: str, prompt: str, effort: str = "medium"
     ) -> None:
         self._client, self._model, self._effort = client, model, effort
+        self.model = model
         self._system = (PROMPTS / f"{prompt}.md").read_text(encoding="utf-8")
         self.turns: list[TurnResult] = []  # for cost and behaviour reports
 
