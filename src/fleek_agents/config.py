@@ -37,11 +37,23 @@ class NegotiationRules(BaseModel):
     cooldown_hours: Annotated[StrictInt, Field(ge=0)] = 24
 
 
+class ModelRouting(BaseModel):
+    """Which Claude model does which job. Bigger deals get the stronger model."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    big_deal_pence: Annotated[StrictInt, Field(gt=0)] = 100_000  # £1,000 and up
+    big_deal_model: str = "claude-sonnet-5-5"
+    small_deal_model: str = "claude-haiku-5-5"
+    digest_model: str = "claude-opus-5-5"  # the account manager's daily summary
+
+
 class Settings(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     bands: BandThresholds = BandThresholds()
     negotiation: NegotiationRules = NegotiationRules()
+    models: ModelRouting = ModelRouting()
 
 
 def load_settings(path: Path = Path("market.toml")) -> Settings:

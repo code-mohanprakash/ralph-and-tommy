@@ -5,6 +5,7 @@ description = "Buyer and seller agents that negotiate bulk secondhand-clothing d
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "anthropic>=2.3.0",
     "fastembed>=0.9.1",
     "pydantic>=2.14.2",
     "rich>=15.0.0",
