@@ -19,6 +19,7 @@ from fleek_agents.config import Settings
 from fleek_agents.domain.fees import buyer_pays, seller_receives
 from fleek_agents.domain.models import Lot
 from fleek_agents.domain.state import NegotiationState
+from fleek_agents.llm.client import LiveClient, LLMClient
 from fleek_agents.market.seed import generate_market
 from fleek_agents.matching.embeddings import Embedder, HashingEmbedder, LocalEmbedder
 from fleek_agents.matching.funnel import bundles_for, possible_deals
@@ -287,3 +288,63 @@ def digest(
             str(i.value),
         )
     console.print(table)
+
+
+class Agents(StrEnum):
+    scripted = "scripted"
+    haiku = "claude-haiku-5-5"
+    sonnet = "claude-sonnet-5-5"
+
+
+@app.command()
+def simulate(
+    agents: Annotated[
+        Agents, typer.Option(help="Who negotiates, on both sides.")
+    ] = Agents.scripted,
+    buyers: Annotated[int, typer.Option(help="How many buyers, from buyer-0001.")] = 500,
+    live: Annotated[
+        bool, typer.Option("--live", help="Call Claude and record (needs the key).")
+    ] = False,
+    seed: Annotated[int, typer.Option(help="Which seeded market.")] = 2026,
+) -> None:
+    """Run many buyers through matching and negotiation, and measure the results."""
+    from pathlib import Path
+
+    from fleek_agents.agents.claude import ClaudeAgent
+    from fleek_agents.evals.sim import simulate as run_simulation
+    from fleek_agents.llm.budget import BudgetedClient, Ledger
+    from fleek_agents.llm.env import load_env_file
+    from fleek_agents.llm.replay import RecordingClient, ReplayClient
+
+    settings = Settings()
+    market = generate_market(seed=seed)
+    secrets = generate_mandates(market, seed=seed)
+    buyer_ids = [w.buyer_id for w in market.wants[:buyers]]
+    if agents is Agents.scripted:
+        summary = run_simulation(
+            market, secrets, buyer_ids, agents="scripted", ralph=ScriptedRalph, tommy=ScriptedTommy
+        )
+    else:
+        recording = (
+            Path(__file__).parent / "evals" / "recordings" / f"{agents.value}_{buyers}.jsonl"
+        )
+        if live:
+            load_env_file()
+            ledger = Ledger(cap_microcents=settings.spending.run_cap_cents * 1_000_000)
+            client: LLMClient = RecordingClient(
+                BudgetedClient(LiveClient(), ledger, settings.spending), recording
+            )
+        else:
+            client = ReplayClient(recording)
+        summary = run_simulation(
+            market,
+            secrets,
+            buyer_ids,
+            agents=agents.value,
+            ralph=lambda: ClaudeAgent(client, model=agents.value, prompt="ralph"),
+            tommy=lambda: ClaudeAgent(client, model=agents.value, prompt="tommy"),
+        )
+    line = summary.line()
+    table = Table(*line)
+    table.add_row(*line.values())
+    Console().print(table)
