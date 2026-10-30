@@ -13,5 +13,7 @@ dist/
 .coverage
 htmlcov/
 
-# Local secrets
+# Local secrets: .env and any variant (.env.local, ...), but keep the example
 .env
+.env.*
+!.env.example
