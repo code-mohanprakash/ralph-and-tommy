@@ -40,3 +40,10 @@ def quote(lot: Lot, seller: Seller, bundles: int) -> Quote:
         shipping=lot.shipping,
         total=(base_price + lot.shipping).times(pieces),
     )
+
+
+class Candidate(DomainModel):
+    """A lot worth negotiating for one want, with the quote it was checked at."""
+
+    lot: Lot
+    quote: Quote

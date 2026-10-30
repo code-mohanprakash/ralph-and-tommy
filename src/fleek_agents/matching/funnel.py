@@ -10,18 +10,11 @@ Nothing here sees a secret number: it only gets the vault's True or False.
 
 from sqlalchemy.orm import Session
 
-from fleek_agents.domain.models import DomainModel, Lot, Market, Want
-from fleek_agents.domain.rules import Quote, quote
+from fleek_agents.domain.models import Lot, Market, Want
+from fleek_agents.domain.rules import Candidate, quote
 from fleek_agents.store.market import hard_filter
 from fleek_agents.vault.checks import deal_possible
 from fleek_agents.vault.seed import Secrets
-
-
-class Candidate(DomainModel):
-    """A lot worth negotiating for one want, with the quote it was checked at."""
-
-    lot: Lot
-    quote: Quote
 
 
 def bundles_for(want: Want, lot: Lot) -> int:

@@ -7,8 +7,8 @@ database (decision 002).
 import numpy as np
 
 from fleek_agents.domain.models import Want
+from fleek_agents.domain.rules import Candidate
 from fleek_agents.matching.embeddings import Embedder
-from fleek_agents.matching.funnel import Candidate
 
 TOP = 10
 
