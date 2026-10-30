@@ -20,4 +20,6 @@ def test_a_settings_file_with_bad_bands_is_refused(tmp_path: Path) -> None:
 
 def test_the_negotiation_rules_come_from_market_toml() -> None:
     settings = load_settings(Path(__file__).parents[1] / "market.toml")
-    assert settings.negotiation == NegotiationRules(max_rounds=6, answer_hours=48)
+    assert settings.negotiation == NegotiationRules(
+        max_rounds=6, answer_hours=48, cooldown_hours=24
+    )

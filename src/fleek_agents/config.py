@@ -33,6 +33,8 @@ class NegotiationRules(BaseModel):
 
     max_rounds: Annotated[StrictInt, Field(ge=1, le=20)] = 6  # offers + counters in one negotiation
     answer_hours: Annotated[StrictInt, Field(ge=1)] = 48
+    # After a negotiation ends without a deal, the same buyer waits this long to retry that lot.
+    cooldown_hours: Annotated[StrictInt, Field(ge=0)] = 24
 
 
 class Settings(BaseModel):

@@ -11,3 +11,5 @@ acceptable_pct = 95
 max_rounds = 6
 # Fleek's Make an Offer: 48 hours to answer, or the offer expires.
 answer_hours = 48
+# After a negotiation ends without a deal, the same buyer waits this long before retrying that lot.
+cooldown_hours = 24
