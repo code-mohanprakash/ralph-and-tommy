@@ -1,7 +1,10 @@
 from collections import Counter
 
 from fleek_agents.domain.models import ListingType
+from fleek_agents.domain.rules import quote
 from fleek_agents.market.seed import generate_market
+from fleek_agents.vault.checks import deal_possible
+from fleek_agents.vault.seed import generate_mandates
 
 MARKET = generate_market(seed=2026)
 
@@ -48,3 +51,31 @@ def test_it_looks_like_fleek() -> None:
 def test_every_seller_s_bulk_tiers_are_within_fleeks_range() -> None:
     for s in MARKET.sellers:
         assert all(0 < t.percent_off <= 15 for t in s.bulk_rules.tiers)
+
+
+def test_mandates_are_the_same_every_time_and_cover_everyone() -> None:
+    first, again = generate_mandates(MARKET, seed=2026), generate_mandates(MARKET, seed=2026)
+    assert set(first.buyers) == {b.id for b in MARKET.buyers}
+    assert set(first.lots) == {lot.id for lot in MARKET.lots}
+    assert all(
+        first.lots[i].floor_per_piece.reveal() == again.lots[i].floor_per_piece.reveal()
+        for i in first.lots
+    )
+
+
+def test_some_pairs_can_deal_and_some_cant() -> None:
+    # A market where everything (or nothing) can close would make a dull demo and hide bugs.
+    secrets = generate_mandates(MARKET, seed=2026)
+    sellers = {s.id: s for s in MARKET.sellers}
+    results: Counter[bool] = Counter()
+    for want, lot in zip(MARKET.wants[:200], MARKET.lots[:200], strict=True):
+        q = quote(lot, sellers[lot.seller_id], bundles=1)
+        results[deal_possible(secrets.buyers[want.buyer_id], secrets.lots[lot.id], q)] += 1
+    assert results[True] > 20 and results[False] > 20
+
+
+def test_floors_sit_below_what_the_seller_would_net_at_the_listed_price() -> None:
+    secrets = generate_mandates(MARKET, seed=2026)
+    for lot in MARKET.lots:
+        net_at_list = lot.base_price.value * 85 / 100
+        assert secrets.lots[lot.id].floor_per_piece.reveal().value <= net_at_list
