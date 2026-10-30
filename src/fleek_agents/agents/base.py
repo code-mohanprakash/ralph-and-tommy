@@ -10,6 +10,7 @@ from datetime import date
 from typing import Literal, Protocol
 
 from fleek_agents.domain.bands import Band
+from fleek_agents.domain.events import EscalationReason
 from fleek_agents.domain.models import DomainModel, Lot, Want
 from fleek_agents.domain.money import Pence
 from fleek_agents.domain.offers import OfferCard, ReasonCode, Terms
@@ -29,7 +30,14 @@ class WalkAway(DomainModel):
     reason: ReasonCode | None = None
 
 
-Action = Send | Accept | WalkAway
+class HandOff(DomainModel):
+    """The agent couldn't act (it refused, hit the spend cap, or kept getting it wrong)."""
+
+    kind: Literal["hand_off"] = "hand_off"
+    reason: EscalationReason
+
+
+Action = Send | Accept | WalkAway | HandOff
 
 
 @dataclass(frozen=True)

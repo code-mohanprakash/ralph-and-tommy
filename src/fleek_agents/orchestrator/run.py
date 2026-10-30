@@ -8,7 +8,7 @@ is refused and handed to a person: the agent doesn't get to break a limit by try
 
 from datetime import timedelta
 
-from fleek_agents.agents.base import Accept, Agent, Send, View, WalkAway
+from fleek_agents.agents.base import Accept, Agent, HandOff, Send, View, WalkAway
 from fleek_agents.config import Settings
 from fleek_agents.domain.bands import Band
 from fleek_agents.domain.events import EscalationReason
@@ -91,6 +91,10 @@ def run_negotiation(
                 )
             else:
                 accept(log, negotiation_id, lot_id=lot.id, by=actor, at=clock.now())
+        elif isinstance(action, HandOff):
+            log.append(
+                negotiation_id, Move.ESCALATE, by=Actor.SYSTEM, at=clock.now(), reason=action.reason
+            )
         elif isinstance(action, WalkAway):
             log.append(negotiation_id, Move.WALK_AWAY, by=actor, at=clock.now())
         clock.advance(THINKING)
