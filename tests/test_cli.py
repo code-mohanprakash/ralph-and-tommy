@@ -146,3 +146,31 @@ def test_a_run_exports_to_json(tmp_path: Path) -> None:
         data["format"] == "ralph-and-tommy/run/1"
         and data["negotiations"][0]["buyer_id"] == "buyer-0002"
     )
+
+
+def test_editing_market_toml_changes_what_the_commands_do(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    toml = (Path(__file__).parents[1] / "market.toml").read_text()
+    for old, new in [
+        ("person_at_or_above_pence = 150000", "person_at_or_above_pence = 99999999"),
+        ("first_deals_by_person = 3", "first_deals_by_person = 0"),
+    ]:
+        assert toml.count(old) == 1
+        toml = toml.replace(old, new)
+    (tmp_path / "market.toml").write_text(toml)
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(
+        app, ["negotiate", "--mock", "--buyer", "buyer-0002", "--matcher", "words"]
+    )
+    assert result.exit_code == 0, result.output
+    # The same £2,332.50 deal waits for a person with the shipped market.toml.
+    assert "Approved by the rule" in result.output
+
+
+def test_without_market_toml_a_command_says_where_to_run_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(app, ["approvals"])
+    assert result.exit_code == 2 and "No market.toml here" in result.output
