@@ -36,6 +36,13 @@ similarity), then scripted Ralph and Tommy negotiate the best match under every 
 what each side would pay and receive. No AI and no API key yet. The first run downloads a 64 MB
 local embedding model; add `--matcher words` to skip it.
 
+And the safety report, which attacks an unsafe "naive" design and the protected one the same
+way and shows what leaked (it replays recorded runs, so it needs no key):
+
+```bash
+uv run fleek safety
+```
+
 ## Your API key
 
 Copy `.env.example` to `.env` and paste your Anthropic key after `ANTHROPIC_API_KEY=`. Git ignores

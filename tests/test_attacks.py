@@ -29,7 +29,7 @@ from fleek_agents.store.events import EventLog
 from fleek_agents.vault.checks import can_accept
 from tests.test_scripted import LOT, SELLER, T0, WANT, limits
 
-CASSETTES = Path(__file__).parent / "cassettes"
+CASSETTES = Path(__file__).parents[1] / "src" / "fleek_agents" / "safety" / "recordings"
 SETTINGS = Settings()
 FLOOR_BASE = Pence(950)  # the naive seller's floor, per piece
 
