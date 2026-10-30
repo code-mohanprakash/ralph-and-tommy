@@ -19,6 +19,7 @@ packages = ["src/fleek_agents"]
 [dependency-groups]
 dev = [
     "hypothesis>=6.170.14",
+    "import-linter>=2.15",
     "mypy>=2.4.1",
     "pre-commit>=4.7.0",
     "pytest>=9.2.0",
@@ -42,3 +43,18 @@ plugins = ["pydantic.mypy"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+
+[tool.importlinter]
+root_package = "fleek_agents"
+
+[[tool.importlinter.contracts]]
+name = "Agents and the AI client never import the vault, directly or indirectly"
+type = "forbidden"
+source_modules = ["fleek_agents.agents", "fleek_agents.llm"]
+forbidden_modules = ["fleek_agents.vault"]
+
+[[tool.importlinter.contracts]]
+name = "The domain stays pure: no database, no vault"
+type = "forbidden"
+source_modules = ["fleek_agents.domain"]
+forbidden_modules = ["fleek_agents.store", "fleek_agents.vault"]

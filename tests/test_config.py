@@ -3,8 +3,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from fleek_agents.config import load_settings
-from fleek_agents.vault.bands import BandThresholds
+from fleek_agents.config import BandThresholds, load_settings
 
 
 def test_the_thresholds_come_from_market_toml() -> None:

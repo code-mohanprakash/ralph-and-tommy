@@ -5,10 +5,8 @@ more, and (in a later PR) it gets one check per round, so it can't zero in on th
 """
 
 from enum import StrEnum
-from typing import Annotated, Self
 
-from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
-
+from fleek_agents.config import BandThresholds
 from fleek_agents.domain.fees import buyer_pays, seller_receives
 from fleek_agents.domain.money import Pence
 from fleek_agents.vault.mandate import BuyerMandate, SellerMandate
@@ -19,21 +17,6 @@ class Band(StrEnum):
     ACCEPTABLE = "acceptable"
     STRETCH = "stretch"  # still inside the limit
     OUTSIDE = "outside"  # past the limit: the vault will refuse it
-
-
-class BandThresholds(BaseModel):
-    """Where the bands split, as a percentage of the limit. Set in market.toml."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    strong_pct: Annotated[StrictInt, Field(gt=0, lt=100)] = 85
-    acceptable_pct: Annotated[StrictInt, Field(gt=0, lt=100)] = 95
-
-    @model_validator(mode="after")
-    def _in_order(self) -> Self:
-        if self.strong_pct >= self.acceptable_pct:
-            raise ValueError("strong_pct must be below acceptable_pct")
-        return self
 
 
 def band_of(part: Pence, whole: Pence, t: BandThresholds) -> Band:

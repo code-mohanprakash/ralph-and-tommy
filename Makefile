@@ -1,4 +1,4 @@
-.PHONY: install hooks lint types test secrets check
+.PHONY: install hooks lint types imports test secrets check
 
 install:
 	uv sync
@@ -13,6 +13,10 @@ lint:
 types:
 	uv run mypy
 
+# Agents and the AI client can't import the vault; the domain can't import the database.
+imports:
+	uv run lint-imports
+
 test:
 	uv run pytest
 
@@ -21,4 +25,4 @@ test:
 secrets:
 	uv run pre-commit run no-api-keys --all-files
 
-check: lint types test secrets
+check: lint types imports test secrets
