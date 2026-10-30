@@ -132,6 +132,8 @@ def test_the_no_channel_check_fails_for_the_right_reason(monkeypatch: pytest.Mon
     )
     monkeypatch.setattr(report, "OfferCard", loose)
     assert report.text_channel_check() == "OPEN: a card accepted a free-text message"
+    row = next(r for r in report.safety_report() if r.attack == "all four text attacks")
+    assert row.leaked == "OPEN"  # the leak column too, not only the last one
 
 
 def test_a_run_exports_to_json(tmp_path: Path) -> None:
