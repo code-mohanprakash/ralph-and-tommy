@@ -117,3 +117,17 @@ def test_the_call_list_comes_from_the_deals_file(tmp_path: Path) -> None:
         )
     listed = runner.invoke(app, ["digest", "--db", db], env={"COLUMNS": "200"})
     assert "buyer-0020" in listed.output and "walked_away" in listed.output
+
+
+def test_the_no_channel_check_fails_for_the_right_reason(monkeypatch: pytest.MonkeyPatch) -> None:
+    # If cards allowed extra fields, the report must say so, not still claim "refused".
+    from fleek_agents.domain import offers
+    from fleek_agents.safety import report
+
+    loose = type(
+        "LooseCard",
+        (offers.OfferCard,),
+        {"model_config": {**offers.OfferCard.model_config, "extra": "allow"}},
+    )
+    monkeypatch.setattr(report, "OfferCard", loose)
+    assert report.text_channel_check() == "OPEN: a card accepted a free-text message"
