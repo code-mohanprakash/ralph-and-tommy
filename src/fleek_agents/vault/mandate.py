@@ -17,5 +17,8 @@ class BuyerMandate:
 
 @dataclass(frozen=True, slots=True, eq=False)
 class SellerMandate:
+    """A floor for one lot: sellers price each lot differently."""
+
     seller_id: str
+    lot_id: str
     floor_per_piece: SecretMoney  # the least they'll take per piece, after Fleek's commission

@@ -14,7 +14,9 @@ def buyer(max_pence: int) -> BuyerMandate:
 
 
 def seller(floor_pence: int) -> SellerMandate:
-    return SellerMandate(seller_id="seller-01", floor_per_piece=SecretMoney(Pence(floor_pence)))
+    return SellerMandate(
+        seller_id="seller-01", lot_id="lot-0001", floor_per_piece=SecretMoney(Pence(floor_pence))
+    )
 
 
 def quote(base: int, shipping: int = 300, pieces: int = 100) -> Quote:

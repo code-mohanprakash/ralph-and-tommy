@@ -50,7 +50,9 @@ def buyer(max_: int) -> BuyerMandate:
 
 
 def seller(floor: int) -> SellerMandate:
-    return SellerMandate(seller_id="seller-01", floor_per_piece=SecretMoney(Pence(floor)))
+    return SellerMandate(
+        seller_id="seller-01", lot_id="lot-0001", floor_per_piece=SecretMoney(Pence(floor))
+    )
 
 
 @MANY

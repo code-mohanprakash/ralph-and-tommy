@@ -12,7 +12,9 @@ from fleek_agents.vault.secret import SecretMoney
 
 DEFAULT = BandThresholds()
 BUYER = BuyerMandate(buyer_id="buyer-0001", max_per_piece=SecretMoney(Pence(1000)))
-SELLER = SellerMandate(seller_id="seller-01", floor_per_piece=SecretMoney(Pence(850)))
+SELLER = SellerMandate(
+    seller_id="seller-01", lot_id="lot-0001", floor_per_piece=SecretMoney(Pence(850))
+)
 
 
 @pytest.mark.parametrize(
@@ -87,7 +89,9 @@ def test_outside_means_exactly_what_the_yes_no_checks_refuse() -> None:
             buyer_id="buyer-0001", max_per_piece=SecretMoney(Pence(rng.randint(0, 4000)))
         )
         s = SellerMandate(
-            seller_id="seller-01", floor_per_piece=SecretMoney(Pence(rng.randint(0, 3000)))
+            seller_id="seller-01",
+            lot_id="lot-0001",
+            floor_per_piece=SecretMoney(Pence(rng.randint(0, 3000))),
         )
         b_band = buyer_band(b, base_price=price, shipping=ship, pieces=pieces, t=DEFAULT)
         s_band = seller_band(s, base_price=price, pieces=pieces, t=DEFAULT)
