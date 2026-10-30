@@ -11,7 +11,7 @@ from fleek_agents.config import NegotiationRules
 from fleek_agents.domain.state import FINAL_STATES, Actor, Move, NegotiationState
 from fleek_agents.orchestrator.clock import Clock
 from fleek_agents.store.events import EventLog
-from fleek_agents.store.pairings import PairingRow, negotiations_between, next_negotiation_id
+from fleek_agents.store.pairings import negotiations_between, new_pairing
 
 FAILED_ENDINGS = {
     NegotiationState.WALKED_AWAY,
@@ -43,8 +43,7 @@ def open_negotiation(
                 f"{buyer_id} can retry {lot_id} from {ended_at + cooldown:%d %b %H:%M}"
             )
 
-    negotiation_id = next_negotiation_id(log.session)
-    log.session.add(PairingRow(negotiation_id=negotiation_id, buyer_id=buyer_id, lot_id=lot_id))
+    negotiation_id = new_pairing(log.session, buyer_id=buyer_id, lot_id=lot_id)
     log.stage(negotiation_id, Move.START, by=Actor.SYSTEM, at=now)
     log.session.commit()  # the pairing and the start, or neither
     return negotiation_id
