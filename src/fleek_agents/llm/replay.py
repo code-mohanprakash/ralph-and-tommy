@@ -45,7 +45,9 @@ class RecordingClient:
             "response": response.model_dump(mode="json"),
         }
         with self._cassette.open("a", encoding="utf-8") as file:
-            file.write(json.dumps(line, sort_keys=True) + "\n")
+            file.write(
+                json.dumps(line) + "\n"
+            )  # not sorted: the response stays exactly as returned
         return response
 
 

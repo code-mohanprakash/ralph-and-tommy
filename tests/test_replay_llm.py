@@ -66,3 +66,15 @@ def test_a_changed_request_doesn_t_match_an_old_recording(tmp_path: Path) -> Non
     assert replay.create(
         model="claude-haiku-5-5", max_tokens=10, messages=[{"role": "user", "content": "a"}]
     )
+
+
+def test_a_recording_keeps_the_response_exactly_as_returned(tmp_path: Path) -> None:
+    # Key order matters: anything that prints the model's input (an error, a log) must read the
+    # same on replay as it did live.
+    live = message(call("send_offer", {"price_pence": 1, "prepaid": False, "reason_codes": []}))
+    cassette = tmp_path / "c.jsonl"
+    RecordingClient(FakeClient(live), cassette).create(
+        model="claude-haiku-5-5", max_tokens=10, messages=[]
+    )
+    replayed = ReplayClient(cassette).create(model="claude-haiku-5-5", max_tokens=10, messages=[])
+    assert list(replayed.content[0].input) == ["price_pence", "prepaid", "reason_codes"]  # type: ignore[union-attr]
