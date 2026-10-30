@@ -7,6 +7,7 @@ It prints what each side would see, never a secret limit.
 
 from datetime import UTC, datetime
 from enum import StrEnum
+from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -15,7 +16,7 @@ from rich.table import Table
 from sqlalchemy.orm import Session
 
 from fleek_agents.agents.scripted import ScriptedRalph, ScriptedTommy
-from fleek_agents.config import Settings
+from fleek_agents.config import Settings, load_settings
 from fleek_agents.domain.fees import buyer_pays, seller_receives
 from fleek_agents.domain.models import Lot
 from fleek_agents.domain.state import NegotiationState
@@ -35,6 +36,16 @@ from fleek_agents.store.db import Base, make_engine
 from fleek_agents.store.events import EventLog
 from fleek_agents.store.market import LotRow, hard_filter, load_market
 from fleek_agents.vault.seed import generate_mandates
+
+
+def _settings() -> Settings:
+    """The numbers in market.toml, read fresh by every command, so editing the file changes them."""
+    path = Path("market.toml")
+    if not path.exists():
+        Console().print("No market.toml here. Run fleek from the repository folder.")
+        raise typer.Exit(code=2)
+    return load_settings(path)
+
 
 app = typer.Typer(
     help="Ralph and Tommy: agents that negotiate bulk deals on Fleek.", no_args_is_help=True
@@ -68,7 +79,7 @@ def negotiate(
         console.print("The Claude agents aren't built yet. Run with --mock for scripted agents.")
         raise typer.Exit(code=2)
 
-    settings = Settings()
+    settings = _settings()
     market = generate_market(seed=seed)
     secrets = generate_mandates(market, seed=seed)
     want = next((w for w in market.wants if w.buyer_id == buyer), None)
@@ -194,7 +205,7 @@ def safety(
         load_env_file()
     source = "live Claude Haiku 5.5" if live else "recorded live runs (no key needed)"
     console.print(f"Safety report, from {source}.")
-    rows = safety_report(live=live)
+    rows = safety_report(live=live, settings=_settings())
     table = Table("Attack", "Target", "Secret leaked?", "Deal outside a limit?", "What happened")
     for row in rows:
         table.add_row(
@@ -226,7 +237,7 @@ def approvals(
 ) -> None:
     """Deals waiting for a person, and why."""
     session, lots = _session(db, seed)
-    waiting = pending(EventLog(session), lots, Settings().approval)
+    waiting = pending(EventLog(session), lots, _settings().approval)
     console = Console()
     if not waiting:
         console.print("Nothing waiting for approval.")
@@ -268,7 +279,7 @@ def digest(
     from fleek_agents.humans.digest import call_list
 
     session, lots = _session(db, seed)
-    items = call_list(EventLog(session), lots, Settings().digest)
+    items = call_list(EventLog(session), lots, _settings().digest)
     console = Console()
     if not items:
         console.print("No near misses to call about.")
@@ -308,21 +319,25 @@ def simulate(
     seed: Annotated[int, typer.Option(help="Which seeded market.")] = 2026,
 ) -> None:
     """Run many buyers through matching and negotiation, and measure the results."""
-    from pathlib import Path
-
     from fleek_agents.agents.claude import ClaudeAgent
     from fleek_agents.evals.sim import simulate as run_simulation
     from fleek_agents.llm.budget import BudgetedClient, Ledger
     from fleek_agents.llm.env import load_env_file
     from fleek_agents.llm.replay import RecordingClient, ReplayClient
 
-    settings = Settings()
+    settings = _settings()
     market = generate_market(seed=seed)
     secrets = generate_mandates(market, seed=seed)
     buyer_ids = [w.buyer_id for w in market.wants[:buyers]]
     if agents is Agents.scripted:
         summary = run_simulation(
-            market, secrets, buyer_ids, agents="scripted", ralph=ScriptedRalph, tommy=ScriptedTommy
+            market,
+            secrets,
+            buyer_ids,
+            agents="scripted",
+            ralph=ScriptedRalph,
+            tommy=ScriptedTommy,
+            settings=settings,
         )
     else:
         recording = (
@@ -343,6 +358,7 @@ def simulate(
             agents=agents.value,
             ralph=lambda: ClaudeAgent(client, model=agents.value, prompt="ralph"),
             tommy=lambda: ClaudeAgent(client, model=agents.value, prompt="tommy"),
+            settings=settings,
         )
     line = summary.line()
     table = Table(*line)
@@ -358,8 +374,6 @@ def export(
     seed: Annotated[int, typer.Option(help="Which seeded market.")] = 2026,
 ) -> None:
     """Write every negotiation in the deals file to a JSON run the Deal Room can play."""
-    from pathlib import Path
-
     from fleek_agents.store.pairings import PairingRow
     from fleek_agents.trace.export import export_run
 

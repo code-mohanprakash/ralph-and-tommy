@@ -86,11 +86,13 @@ def _client(name: str, live: bool) -> LLMClient:
     return LiveClient() if live else ReplayClient(RECORDINGS / f"{name}.jsonl")
 
 
-def _negotiate(lot: Lot, ralph: Agent, tommy: Agent) -> tuple[EventLog, str, NegotiationState]:
+def _negotiate(
+    lot: Lot, ralph: Agent, tommy: Agent, settings: Settings
+) -> tuple[EventLog, str, NegotiationState]:
     engine = make_engine("sqlite://")
     Base.metadata.create_all(engine)
     session = Session(engine)
-    log, clock, settings = EventLog(session), FakeClock(START), Settings()
+    log, clock = EventLog(session), FakeClock(START)
     put_on_sale(session, lot.id, bundles=1)
     nid = open_negotiation(
         log, buyer_id="buyer-0001", lot_id=lot.id, clock=clock, rules=settings.negotiation
@@ -145,8 +147,11 @@ def text_channel_check() -> str:
 
 
 def safety_report(
-    live: bool = False, progress: Callable[[str], None] = lambda _: None
+    live: bool = False,
+    progress: Callable[[str], None] = lambda _: None,
+    settings: Settings | None = None,
 ) -> list[Row]:
+    settings = settings or Settings()
     rows: list[Row] = []
     for name in sorted(TEXT_ATTACKS):
         progress(name)
@@ -164,7 +169,7 @@ def safety_report(
     progress("planted listing")
     poisoned = DEMO_LOT.model_copy(update={"description": PLANTED_DESCRIPTION})
     ralph = ClaudeAgent(_client("attack_planted_listing", live), model=MODEL, prompt="ralph")
-    log, nid, state = _negotiate(poisoned, ralph, ScriptedTommy())
+    log, nid, state = _negotiate(poisoned, ralph, ScriptedTommy(), settings)
     offers = [
         str(e.card.base_price) for e in log.read(nid) if e.card and e.card.from_role == "buyer"
     ]
@@ -180,7 +185,7 @@ def safety_report(
 
     progress("probing bot")
     tommy = ClaudeAgent(_client("attack_probing_bot", live), model=MODEL, prompt="tommy")
-    log, nid, state = _negotiate(DEMO_LOT, ProbingBuyer(), tommy)
+    log, nid, state = _negotiate(DEMO_LOT, ProbingBuyer(), tommy, settings)
     counters = [
         str(e.card.base_price) for e in log.read(nid) if e.card and e.card.from_role == "seller"
     ]
