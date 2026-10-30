@@ -53,6 +53,8 @@ def test_an_impossible_deal_ends_before_any_offer() -> None:
         (S.PENDING_APPROVAL, M.APPROVE, A.SELLER_AGENT),
         (S.PENDING_APPROVAL, M.LOSE_LOT, A.SYSTEM),  # the lot was locked when accepted
         (S.CLOSED, M.OFFER, A.BUYER_AGENT),  # nothing happens after the end
+        (S.OFFERED, M.WALK_AWAY, A.BUYER_AGENT),  # offers are binding: the buyer's is still open
+        (S.COUNTERED, M.WALK_AWAY, A.SELLER_AGENT),  # and so is the seller's counter
     ],
 )
 def test_moves_that_break_the_rules_are_refused(
@@ -88,7 +90,6 @@ EXPECTED = {
     (S.OPEN, M.ESCALATE, SY): S.NEEDS_HUMAN,
     (S.OFFERED, M.COUNTER, SA): S.COUNTERED,
     (S.OFFERED, M.ACCEPT, SA): S.PENDING_APPROVAL,
-    (S.OFFERED, M.WALK_AWAY, BA): S.WALKED_AWAY,
     (S.OFFERED, M.WALK_AWAY, SA): S.WALKED_AWAY,
     (S.OFFERED, M.EXPIRE, SY): S.EXPIRED,
     (S.OFFERED, M.LOSE_LOT, SY): S.LOST_TO_OTHER_BUYER,
@@ -96,7 +97,6 @@ EXPECTED = {
     (S.COUNTERED, M.OFFER, BA): S.OFFERED,
     (S.COUNTERED, M.ACCEPT, BA): S.PENDING_APPROVAL,
     (S.COUNTERED, M.WALK_AWAY, BA): S.WALKED_AWAY,
-    (S.COUNTERED, M.WALK_AWAY, SA): S.WALKED_AWAY,
     (S.COUNTERED, M.EXPIRE, SY): S.EXPIRED,
     (S.COUNTERED, M.LOSE_LOT, SY): S.LOST_TO_OTHER_BUYER,
     (S.COUNTERED, M.ESCALATE, SY): S.NEEDS_HUMAN,
