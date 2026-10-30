@@ -112,7 +112,14 @@ def tools_for(view: View) -> list[Tool]:
         band = view.band(Pence(price.price_pence))
         return json.dumps({"band": band.value, "meaning": MEANING[band]})
 
+    compare = Tool(
+        "compare_open_deals",
+        "Your other negotiations for this buyer, side by side: where each stands.",
+        NoInput,
+        run=lambda _: json.dumps({"other_deals": list(view.elsewhere)}),
+    )
     return [
+        *([compare] if view.elsewhere else []),
         Tool(
             "get_lot",
             "The lot being negotiated: public facts only.",
