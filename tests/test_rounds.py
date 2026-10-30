@@ -10,6 +10,7 @@ from fleek_agents.domain.money import Pence
 from fleek_agents.domain.offers import Terms
 from fleek_agents.domain.state import Actor, Move, NegotiationState
 from fleek_agents.orchestrator.clock import FakeClock
+from fleek_agents.orchestrator.opening import open_negotiation
 from fleek_agents.orchestrator.rounds import (
     BackwardsConcession,
     RoundLimitReached,
@@ -17,6 +18,7 @@ from fleek_agents.orchestrator.rounds import (
     send_card,
 )
 from fleek_agents.store.db import Base, make_engine
+from fleek_agents.store.deals import accept, put_on_sale, stock_left
 from fleek_agents.store.events import EventLog
 
 S, M, A = NegotiationState, Move, Actor
@@ -86,15 +88,6 @@ def test_an_open_negotiation_with_no_offer_expires_48_hours_after_it_started(log
     assert expire_due(log, ["neg-0001"], clock=clock, rules=RULES) == ["neg-0001"]
 
 
-def test_a_deal_waiting_for_approval_expires_too(log: EventLog) -> None:
-    clock = FakeClock(T0)
-    started(log, clock)
-    send_card(log, "neg-0001", by=A.BUYER_AGENT, terms=TERMS, clock=clock, rules=RULES)
-    log.append("neg-0001", M.ACCEPT, by=A.SELLER_AGENT, at=clock.now())
-    clock.advance(timedelta(hours=48))
-    assert expire_due(log, ["neg-0001"], clock=clock, rules=RULES) == ["neg-0001"]
-
-
 def test_an_ended_negotiation_is_left_alone(log: EventLog) -> None:
     clock = FakeClock(T0)
     started(log, clock)
@@ -145,3 +138,18 @@ def test_a_seller_can_only_lower_their_counter(log: EventLog) -> None:
     send_card(log, "neg-0001", by=A.BUYER_AGENT, terms=terms(1100), clock=clock, rules=RULES)
     with pytest.raises(BackwardsConcession):
         send_card(log, "neg-0001", by=A.SELLER_AGENT, terms=terms(1401), clock=clock, rules=RULES)
+
+
+def test_an_expired_approval_gives_the_stock_back(log: EventLog) -> None:
+    clock = FakeClock(T0)
+    put_on_sale(log.session, "lot-0001", bundles=1)
+    nid = open_negotiation(log, buyer_id="buyer-0001", lot_id="lot-0001", clock=clock, rules=RULES)
+    send_card(log, nid, by=A.BUYER_AGENT, terms=TERMS, clock=clock, rules=RULES)
+    accept(log, nid, lot_id="lot-0001", by=A.SELLER_AGENT, at=clock.now())
+    assert stock_left(log.session, "lot-0001") == 0
+    agreed = log.saved(nid).agreed
+    assert agreed is not None and agreed.bundles == 1  # the snapshot remembers what was agreed
+
+    clock.advance(timedelta(hours=48))
+    assert expire_due(log, [nid], clock=clock, rules=RULES) == [nid]
+    assert stock_left(log.session, "lot-0001") == 1  # back on sale for anyone

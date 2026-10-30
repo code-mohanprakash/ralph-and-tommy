@@ -24,6 +24,7 @@ class Snapshot(DomainModel):
     cards: Annotated[StrictInt, Field(ge=0)] = 0  # offers and counters sent so far
     last_offer: OfferCard | None = None  # the buyer's latest card
     last_counter: OfferCard | None = None  # the seller's latest card
+    agreed: OfferCard | None = None  # the card that was accepted, once one is
     updated_at: AwareDatetime | None = None
 
 
@@ -46,6 +47,12 @@ def apply(snapshot: Snapshot, event: Event) -> Snapshot:
         changes["last_counter"] = event.card
     if event.card is not None:
         changes["cards"] = snapshot.cards + 1
+    if event.move is Move.ACCEPT:  # the other side's card that was on the table
+        on_table = {
+            NegotiationState.OFFERED: snapshot.last_offer,
+            NegotiationState.COUNTERED: snapshot.last_counter,
+        }
+        changes["agreed"] = on_table.get(snapshot.state)
     return snapshot.model_copy(update=changes)
 
 
