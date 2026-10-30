@@ -51,6 +51,11 @@ class Pence:
             return NotImplemented
         return Pence(self.value + other.value)
 
+    def __sub__(self, other: Pence) -> Pence:
+        if not isinstance(other, Pence):
+            return NotImplemented
+        return Pence(self.value - other.value)  # a negative result is refused
+
     def times(self, quantity: int) -> Pence:
         """The price of `quantity` pieces."""
         if _require_int(quantity, "Quantity") < 0:
@@ -60,12 +65,21 @@ class Pence:
     def discounted(self, percent: int) -> Pence:
         """The price after a whole-percent discount, rounded to the nearest penny.
 
-        This is the only place money is rounded. Half a penny rounds up, as on a receipt:
-        £13.50 at 5% off is £12.825, which becomes £12.83.
+        Half a penny rounds up, as on a receipt: £13.50 at 5% off is £12.825, which becomes
+        £12.83.
         """
         if not 0 <= _require_int(percent, "Discount") <= 100:
             raise ValueError(f"A discount must be 0 to 100 percent, got {percent}")
-        exact = Decimal(self.value) * (100 - percent) / 100
+        return self.percent(100 - percent)
+
+    def percent(self, percent: int) -> Pence:
+        """`percent`% of this amount, rounded to the nearest penny, half a penny up.
+
+        The only place money is rounded: discounts and fees both come through here.
+        """
+        if not 0 <= _require_int(percent, "Percent") <= 100:
+            raise ValueError(f"A percentage must be 0 to 100, got {percent}")
+        exact = Decimal(self.value) * percent / 100
         return Pence(int(exact.quantize(Decimal(1), rounding=ROUND_HALF_UP)))
 
     def __str__(self) -> str:
