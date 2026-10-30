@@ -39,6 +39,10 @@ class RoundLimitReached(Exception):
     """No more cards: the side can only accept or walk away."""
 
 
+class BackwardsConcession(Exception):
+    """A buyer lowering their offer, or a seller raising their counter."""
+
+
 def send_card(
     log: EventLog,
     negotiation_id: str,
@@ -55,6 +59,13 @@ def send_card(
     snapshot = log.saved(negotiation_id)
     if snapshot.cards >= rules.max_rounds:
         raise RoundLimitReached(f"{rules.max_rounds} cards sent; accept or walk away")
+    # Concessions only go one way, so walking a price up and down can't map out a limit.
+    previous = snapshot.last_offer if role is Role.BUYER else snapshot.last_counter
+    if previous is not None:
+        if role is Role.BUYER and terms.base_price < previous.base_price:
+            raise BackwardsConcession("A buyer's offer can only stay the same or go up")
+        if role is Role.SELLER and terms.base_price > previous.base_price:
+            raise BackwardsConcession("A seller's counter can only stay the same or go down")
     now = clock.now()
     card = OfferCard(
         negotiation_id=negotiation_id,
