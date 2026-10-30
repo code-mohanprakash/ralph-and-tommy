@@ -63,3 +63,24 @@ def test_an_unknown_buyer_is_explained() -> None:
     )
     assert result.exit_code == 2
     assert "No buyer called" in result.output
+
+
+def test_every_line_the_command_prints_goes_through_the_leak_scanner(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from fleek_agents.safety import scanner as scanner_module
+
+    seen: list[str] = []
+    original = scanner_module.LeakScanner.clean
+
+    def spy(self: scanner_module.LeakScanner, line: str) -> str:
+        seen.append(line)
+        return original(self, line)
+
+    monkeypatch.setattr(scanner_module.LeakScanner, "clean", spy)
+    result = runner.invoke(
+        app, ["negotiate", "--mock", "--buyer", "buyer-0001", "--matcher", "words"]
+    )
+    assert result.exit_code == 0, result.output
+    assert any("wants:" in line for line in seen) and any("Ralph" in line for line in seen)
+    assert any("pays" in line or "Ended" in line for line in seen)

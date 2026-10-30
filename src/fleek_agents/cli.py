@@ -25,6 +25,7 @@ from fleek_agents.matching.ranking import rank
 from fleek_agents.orchestrator.clock import FakeClock
 from fleek_agents.orchestrator.opening import open_negotiation
 from fleek_agents.orchestrator.run import run_negotiation
+from fleek_agents.safety.scanner import scanner_for
 from fleek_agents.store.db import Base, make_engine
 from fleek_agents.store.events import EventLog
 from fleek_agents.store.market import hard_filter, load_market
@@ -74,25 +75,25 @@ def negotiate(
     Base.metadata.create_all(engine)
     with Session(engine) as session:
         load_market(session, market)
-        console.rule(f"[bold]{buyer}[/] wants: {want.text}")
+        lines: list[str] = [f"{buyer} wants: {want.text}"]
 
         passed = hard_filter(session, want)
         possible = possible_deals(session, market, secrets, want)
         embedder: Embedder = LocalEmbedder() if matcher is Matcher.local else HashingEmbedder()
         top = rank(want, possible, embedder)
-        console.print(
+        lines.append(
             f"Matching: {len(market.lots):,} lots → {len(passed)} pass the filters → "
             f"{len(possible)} could work at some price → top {len(top)} by similarity"
         )
         if not top:
-            console.print("No lot can work for this buyer. Nothing to negotiate, nothing spent.")
+            lines.append("No lot can work for this buyer. Nothing to negotiate, nothing spent.")
+            for line in lines:
+                console.print(line)
             raise typer.Exit(code=0)
 
         lot = top[0].lot
         bundles = bundles_for(want, lot)
-        console.print(
-            f"Chosen: [bold]{lot.title}[/] from {sellers[lot.seller_id].name}, {bundles} bundle(s)"
-        )
+        lines.append(f"Chosen: {lot.title} from {sellers[lot.seller_id].name}, {bundles} bundle(s)")
 
         log, clock = EventLog(session), FakeClock(START)
         nid = open_negotiation(
@@ -113,28 +114,51 @@ def negotiate(
             settings=settings,
         )
 
-        table = Table("Round", "Who", "Move", "Base / piece", "Bundles")
+        rows: list[tuple[str, ...]] = []
+        public = [lot.base_price, lot.shipping, top[0].quote.base_price]
         for event in log.read(nid):
             who = {"buyer_agent": "Ralph", "seller_agent": "Tommy"}.get(event.by, "Fleek")
-            price = str(event.card.base_price) if event.card else ""
-            bundles_text = str(event.card.bundles) if event.card else ""
-            round_text = str(event.card.round) if event.card else ""
-            table.add_row(round_text, who, event.move, price, bundles_text)
-        console.print(table)
+            card = event.card
+            if card is not None:
+                public.append(card.base_price)
+            price = str(card.base_price) if card else ""
+            bundles_text = str(card.bundles) if card else ""
+            round_text = str(card.round) if card else ""
+            rows.append((round_text, who, str(event.move), price, bundles_text))
 
+        after: list[str] = []
         if final is NegotiationState.PENDING_APPROVAL:
             agreed = [e.card for e in log.read(nid) if e.card is not None][-1]
             pieces = agreed.bundles * lot.pieces
             paid = buyer_pays(base_price=agreed.base_price, shipping=lot.shipping, pieces=pieces)
             got = seller_receives(base_price=agreed.base_price, pieces=pieces)
-            console.print(
-                f"[green]Agreed[/] at {agreed.base_price} a piece for {pieces} pieces, "
+            public += [
+                paid.total,
+                paid.goods,
+                paid.protection_fee,
+                got.net,
+                got.gross,
+                got.commission,
+            ]
+            after.append(
+                f"Agreed at {agreed.base_price} a piece for {pieces} pieces, "
                 f"inside both secret limits. Waiting for approval."
             )
             fee = paid.protection_fee
-            console.print(f"Buyer pays {paid.total} (goods {paid.goods} + protection fee {fee})")
-            console.print(
+            after.append(f"Buyer pays {paid.total} (goods {paid.goods} + protection fee {fee})")
+            after.append(
                 f"Seller receives {got.net} (base {got.gross} - commission {got.commission})"
             )
         else:
-            console.print(f"Ended: [yellow]{final}[/]")
+            after.append(f"Ended: {final}")
+
+        # Every line a person reads goes through the leak scanner last.
+        scanner = scanner_for(secrets.buyers[buyer], secrets.lots[lot.id], public)
+        for line in lines:
+            console.print(scanner.clean(line))
+        table = Table("Round", "Who", "Move", "Base / piece", "Bundles")
+        for row in rows:
+            table.add_row(*(scanner.clean(cell) for cell in row))
+        console.print(table)
+        for line in after:
+            console.print(scanner.clean(line))

@@ -22,16 +22,25 @@ class Leak(StrEnum):
     NEAR = "near"
 
 
-def find_amounts(text: str) -> list[Pence]:
-    found: list[tuple[int, Pence]] = []
+def find_amount_spans(text: str) -> list[tuple[int, int, Pence]]:
+    """Every amount in the text, with where it starts and ends, in reading order."""
+    found: list[tuple[int, int, Pence]] = []
     for m in _POUNDS.finditer(text):
         pounds = int(m.group(1).replace(",", ""))
-        found.append((m.start(), Pence(pounds * 100 + int(m.group(2) or 0))))
+        found.append((m.start(), m.end(), Pence(pounds * 100 + int(m.group(2) or 0))))
     for m in _DECIMAL.finditer(text):
-        found.append((m.start(), Pence(int(m.group(1)) * 100 + int(m.group(2)))))
+        found.append((m.start(), m.end(), Pence(int(m.group(1)) * 100 + int(m.group(2)))))
     for m in _PENCE.finditer(text):
-        found.append((m.start(), Pence(int(m.group(1).replace(",", "")))))
-    return [amount for _, amount in sorted(found, key=lambda pair: pair[0])]
+        found.append((m.start(), m.end(), Pence(int(m.group(1).replace(",", "")))))
+    return sorted(found, key=lambda span: span[0])
+
+
+def find_amounts(text: str) -> list[Pence]:
+    return [amount for _, _, amount in find_amount_spans(text)]
+
+
+def is_near(amount: Pence, secret: Pence) -> bool:
+    return abs(amount.value - secret.value) * 100 <= secret.value * NEAR_PERCENT
 
 
 def leak_in(text: str, secret: Pence) -> Leak | None:
@@ -39,6 +48,6 @@ def leak_in(text: str, secret: Pence) -> Leak | None:
     for amount in find_amounts(text):
         if amount == secret:
             return Leak.EXACT
-        if abs(amount.value - secret.value) * 100 <= secret.value * NEAR_PERCENT:
+        if is_near(amount, secret):
             worst = Leak.NEAR
     return worst
