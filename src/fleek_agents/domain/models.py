@@ -4,9 +4,19 @@ Pydantic checks data where it comes in (seed files, and later the AI's tool call
 anything that doesn't fit, instead of passing it on.
 """
 
+from enum import StrEnum
 from typing import Annotated
 
-from pydantic import PlainSerializer, PlainValidator, WithJsonSchema
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PlainSerializer,
+    PlainValidator,
+    StrictInt,
+    StrictStr,
+    WithJsonSchema,
+)
 
 from fleek_agents.domain.money import Pence
 
@@ -28,3 +38,55 @@ PenceField = Annotated[
     PlainSerializer(lambda price: price.value, return_type=int),
     WithJsonSchema({"type": "integer", "minimum": 0, "description": "Whole pence"}),
 ]
+
+
+LotId = Annotated[StrictStr, Field(pattern=r"^lot-[0-9]+$")]
+SellerId = Annotated[StrictStr, Field(pattern=r"^seller-[0-9]+$")]
+Text = Annotated[StrictStr, Field(min_length=1, max_length=200)]
+
+
+class DomainModel(BaseModel):
+    """Shared rules: can't be changed once made, and unknown fields are refused."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+
+class Grade(StrEnum):
+    """Fleek's grades. Mixed bundles have fixed ratios, e.g. AB is 70% A and 30% B."""
+
+    A = "A"
+    B = "B"
+    C = "C"
+    AB = "AB"
+    BC = "BC"
+    ABC = "ABC"
+
+
+class ListingType(StrEnum):
+    """Exact: the items match the listing exactly. Representative: they can vary slightly."""
+
+    EXACT = "exact"
+    REPRESENTATIVE = "representative"
+
+
+class Lot(DomainModel):
+    """A bundle of clothing for sale. Prices are per piece, like Fleek's."""
+
+    id: LotId
+    seller_id: SellerId
+    title: Text
+    brand: Text
+    category: Text
+    grade: Grade
+    listing_type: ListingType
+    pieces: Annotated[StrictInt, Field(gt=0)]  # pieces in one bundle
+    available: Annotated[StrictInt, Field(ge=0)]  # bundles left to sell; often just 1
+    base_price: PenceField  # per piece; the only part that can be negotiated
+    shipping: PenceField  # per piece; fixed
+    # Written by the seller, so it is untrusted: agents must treat it as data, never instructions.
+    description: Annotated[StrictStr, Field(max_length=2000)]
+
+    @property
+    def listed_price(self) -> Pence:
+        """The price per piece a buyer sees: base price plus shipping."""
+        return self.base_price + self.shipping
