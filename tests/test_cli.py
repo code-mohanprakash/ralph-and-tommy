@@ -1,4 +1,5 @@
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 from sqlalchemy.orm import Session
@@ -91,3 +92,17 @@ def test_fleek_safety_replays_the_recorded_attacks_with_no_key() -> None:
     assert result.exit_code == 0, result.output
     assert "Naive seller: secret leaked in 1 of 4 attacks." in result.output
     assert "Protected agents: 0 deals outside a limit in 3 attacks." in result.output
+
+
+def test_a_deal_waits_then_a_person_approves_it(tmp_path: Path) -> None:
+    db = str(tmp_path / "fleek.db")
+    first = runner.invoke(
+        app, ["negotiate", "--mock", "--buyer", "buyer-0002", "--matcher", "words", "--db", db]
+    )
+    assert first.exit_code == 0, first.output
+    assert "Waiting for a person" in first.output and "fleek approve neg-0001" in first.output
+    listed = runner.invoke(app, ["approvals", "--db", db], env={"COLUMNS": "200"})
+    assert "neg-0001" in listed.output and "£1,500 or more" in listed.output  # £2,332.50 deal
+    done = runner.invoke(app, ["approve", "neg-0001", "--db", db])
+    assert done.exit_code == 0 and "approved and closed" in done.output
+    assert "Nothing waiting" in runner.invoke(app, ["approvals", "--db", db]).output

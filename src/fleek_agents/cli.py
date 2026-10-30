@@ -17,18 +17,22 @@ from sqlalchemy.orm import Session
 from fleek_agents.agents.scripted import ScriptedRalph, ScriptedTommy
 from fleek_agents.config import Settings
 from fleek_agents.domain.fees import buyer_pays, seller_receives
+from fleek_agents.domain.models import Lot
 from fleek_agents.domain.state import NegotiationState
 from fleek_agents.market.seed import generate_market
 from fleek_agents.matching.embeddings import Embedder, HashingEmbedder, LocalEmbedder
 from fleek_agents.matching.funnel import bundles_for, possible_deals
 from fleek_agents.matching.ranking import rank
+from fleek_agents.orchestrator.approval import approve as approve_deal
+from fleek_agents.orchestrator.approval import pending, settle
+from fleek_agents.orchestrator.approval import reject as reject_deal
 from fleek_agents.orchestrator.clock import FakeClock
 from fleek_agents.orchestrator.opening import open_negotiation
 from fleek_agents.orchestrator.run import run_negotiation
 from fleek_agents.safety.scanner import scanner_for
 from fleek_agents.store.db import Base, make_engine
 from fleek_agents.store.events import EventLog
-from fleek_agents.store.market import hard_filter, load_market
+from fleek_agents.store.market import LotRow, hard_filter, load_market
 from fleek_agents.vault.seed import generate_mandates
 
 app = typer.Typer(
@@ -55,6 +59,7 @@ def negotiate(
     buyer: Annotated[str, typer.Option(help="Which buyer, e.g. buyer-0001.")] = "buyer-0001",
     seed: Annotated[int, typer.Option(help="Which seeded market.")] = 2026,
     matcher: Annotated[Matcher, typer.Option(help="How to rank lots.")] = Matcher.local,
+    db: Annotated[str, typer.Option(help="Keep deals in this file, e.g. fleek.db.")] = "",
 ) -> None:
     """Match one buyer to a lot, negotiate it, and show the result."""
     console = Console()
@@ -71,10 +76,11 @@ def negotiate(
         raise typer.Exit(code=2)
     sellers = {s.id: s for s in market.sellers}
 
-    engine = make_engine("sqlite://")
+    engine = make_engine(f"sqlite:///{db}" if db else "sqlite://")
     Base.metadata.create_all(engine)
     with Session(engine) as session:
-        load_market(session, market)
+        if session.get(LotRow, market.lots[0].id) is None:
+            load_market(session, market)
         lines: list[str] = [f"{buyer} wants: {want.text}"]
 
         passed = hard_filter(session, want)
@@ -91,6 +97,7 @@ def negotiate(
                 console.print(line)
             raise typer.Exit(code=0)
 
+        lots_by_id = {lot.id: lot for lot in market.lots}
         lot = top[0].lot
         bundles = bundles_for(want, lot)
         lines.append(f"Chosen: {lot.title} from {sellers[lot.seller_id].name}, {bundles} bundle(s)")
@@ -149,6 +156,13 @@ def negotiate(
             after.append(
                 f"Seller receives {got.net} (base {got.gross} - commission {got.commission})"
             )
+            state = settle(log, nid, lots=lots_by_id, rules=settings.approval, at=clock.now())
+            if state is NegotiationState.CLOSED:
+                after.append("Approved by the rule (a small deal for a buyer with a few deals).")
+            else:
+                why = next(w.why for w in pending(log, lots_by_id, settings.approval))
+                where = f" --db {db}" if db else ""
+                after.append(f"Waiting for a person ({why}): fleek approve {nid}{where}")
         else:
             after.append(f"Ended: {final}")
 
@@ -195,3 +209,50 @@ def safety(
         f"Protected agents: {breaches} deals outside a limit in {len(protected)} attacks."
     )
     console.print("One recorded run per attack on one model: an illustration, not a rate.")
+
+
+def _session(db: str, seed: int) -> tuple[Session, dict[str, Lot]]:
+    market = generate_market(seed=seed)
+    engine = make_engine(f"sqlite:///{db}")
+    Base.metadata.create_all(engine)
+    return Session(engine), {lot.id: lot for lot in market.lots}
+
+
+@app.command()
+def approvals(
+    db: Annotated[str, typer.Option(help="The deals file.")] = "fleek.db",
+    seed: Annotated[int, typer.Option(help="Which seeded market.")] = 2026,
+) -> None:
+    """Deals waiting for a person, and why."""
+    session, lots = _session(db, seed)
+    waiting = pending(EventLog(session), lots, Settings().approval)
+    console = Console()
+    if not waiting:
+        console.print("Nothing waiting for approval.")
+        return
+    table = Table("Negotiation", "Buyer", "Lot", "Buyer pays", "Why it's waiting")
+    for w in waiting:
+        table.add_row(w.negotiation_id, w.buyer_id, w.lot.title, str(w.total), w.why)
+    console.print(table)
+
+
+@app.command()
+def approve(
+    negotiation: Annotated[str, typer.Argument(help="e.g. neg-0001")],
+    db: Annotated[str, typer.Option(help="The deals file.")] = "fleek.db",
+) -> None:
+    """Approve a waiting deal: it closes."""
+    session, _ = _session(db, 2026)
+    approve_deal(EventLog(session), negotiation, at=datetime.now(UTC))
+    Console().print(f"{negotiation} approved and closed.")
+
+
+@app.command()
+def reject(
+    negotiation: Annotated[str, typer.Argument(help="e.g. neg-0001")],
+    db: Annotated[str, typer.Option(help="The deals file.")] = "fleek.db",
+) -> None:
+    """Reject a waiting deal: the lot goes back on sale."""
+    session, _ = _session(db, 2026)
+    reject_deal(EventLog(session), negotiation, at=datetime.now(UTC))
+    Console().print(f"{negotiation} rejected. The lot is back on sale.")

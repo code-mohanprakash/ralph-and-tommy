@@ -15,6 +15,7 @@ from sqlalchemy.orm import Mapped, Session, mapped_column
 from fleek_agents.domain.state import LIVE, Actor, IllegalMove, Move, NegotiationState
 from fleek_agents.store.db import Base
 from fleek_agents.store.events import EventLog
+from fleek_agents.store.pairings import lot_of
 
 
 class StockRow(Base):
@@ -94,3 +95,12 @@ def give_back(session: Session, lot_id: str, *, bundles: int) -> None:
         .where(StockRow.lot_id == lot_id)
         .values(available=StockRow.available + bundles)
     )
+
+
+def give_back_agreed(log: EventLog, negotiation_id: str) -> None:
+    """Put an agreed deal's bundles back on sale. Part of the caller's transaction."""
+    snap = log.saved(negotiation_id)
+    lot_id = lot_of(log.session, negotiation_id)
+    if lot_id is None or snap.agreed is None:
+        raise ValueError(f"{negotiation_id} has no agreed deal with a lot to give back")
+    give_back(log.session, lot_id, bundles=snap.agreed.bundles)
