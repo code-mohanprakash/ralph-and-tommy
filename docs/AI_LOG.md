@@ -32,7 +32,7 @@ calls no model.
 
 ## Where it helped
 
-- **Speed.** About 60 PRs and 943 tests between Thursday 29 Oct at night and Friday 30 Oct.
+- **Speed.** About 65 PRs and 951 tests between Thursday 29 Oct at night and Friday 30 Oct.
   I couldn't have built this much alone in the time.
 - **Tests I wouldn't have written by hand.** Property tests (2,000 random cases that the band words
   and the yes/no checks agree), race tests with 10 threads, and "break it on purpose" checks:
@@ -86,6 +86,21 @@ production-ready, secure, guaranteed, unhackable, proves, fully autonomous.
 | [#42](https://github.com/code-mohanprakash/ralph-and-tommy/pull/42) | Recordings saved responses with sorted keys, so one replay missed at call 7 | Tracing request fingerprints |
 | [#51](https://github.com/code-mohanprakash/ralph-and-tommy/pull/51) | The missing `compare_open_deals` tool (above) | Study notes read the merged code |
 | [#56](https://github.com/code-mohanprakash/ralph-and-tommy/pull/56) | A `fleek safety` check passed for the wrong reason (the card was refused for missing fields, not for the text) | Study notes ran the check and counted the errors |
+| [#63](https://github.com/code-mohanprakash/ralph-and-tommy/pull/63) | No command read `market.toml`; they all used the same numbers copied into the code, so editing the file changed nothing | Study notes traced where the approval threshold comes from |
+| [#65](https://github.com/code-mohanprakash/ralph-and-tommy/pull/65) | Two "Secret leaked?" cells in `fleek safety` were fixed text, not results | Study notes traced each cell back to its code |
+
+**6. Tests that checked less than their names said.** Building the claim → evidence table in
+[LIMITS.md](LIMITS.md) and reading each test for the study notes turned up four:
+
+- EVALS.md said the tests check every Claude deal is inside both limits; only the scripted run
+  was checked. Test added in [#62](https://github.com/code-mohanprakash/ralph-and-tommy/pull/62).
+- The digest test named "live and agreed deals" only built a live one. Fixed in
+  [#64](https://github.com/code-mohanprakash/ralph-and-tommy/pull/64).
+- The export's secret check skipped prices written inside text and the buyer's budget. Fixed in
+  [#66](https://github.com/code-mohanprakash/ralph-and-tommy/pull/66).
+- The `fleek safety` cells above (#65).
+
+Each new test was broken on purpose first and seen to fail, then restored and seen to pass.
 
 ## What the agents themselves did that surprised me
 
