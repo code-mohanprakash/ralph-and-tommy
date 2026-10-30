@@ -124,6 +124,7 @@ def test_an_agent_s_view_holds_no_secret_field() -> None:
         "history",
         "rounds_left",
         "band",
+        "today",
     }
 
 

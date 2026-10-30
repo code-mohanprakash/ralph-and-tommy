@@ -4,7 +4,7 @@ They exist to test everything around the AI first: the harness, the rules, the v
 They follow the same limits the AI agents will: they only learn about their limit through bands.
 """
 
-from datetime import date, timedelta
+from datetime import timedelta
 
 from fleek_agents.agents.base import Accept, Action, Send, View, WalkAway
 from fleek_agents.domain.bands import Band
@@ -20,8 +20,9 @@ def _round5(pence: int) -> Pence:
 
 
 def _terms(view: View, price: Pence) -> Terms:
-    today = view.on_table.expires_at.date() if view.on_table else date(2026, 11, 2)
-    return Terms(base_price=price, bundles=view.bundles, prepaid=False, ship_by=today + SHIP_BY)
+    return Terms(
+        base_price=price, bundles=view.bundles, prepaid=False, ship_by=view.today + SHIP_BY
+    )
 
 
 class ScriptedRalph:

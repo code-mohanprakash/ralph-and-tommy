@@ -6,6 +6,7 @@ band on a price. It never sees a number from the vault. It answers with exactly 
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import date
 from typing import Literal, Protocol
 
 from fleek_agents.domain.bands import Band
@@ -42,6 +43,7 @@ class View:
     history: tuple[OfferCard, ...]  # every card so far, oldest first
     rounds_left: int  # cards that can still be sent
     band: Callable[[Pence], Band]  # how a price sits against *my own* limit
+    today: date
 
     @property
     def on_table(self) -> OfferCard | None:
