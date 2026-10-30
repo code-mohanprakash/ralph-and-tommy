@@ -7,12 +7,12 @@ from sqlalchemy.orm import Session
 
 from fleek_agents.config import NegotiationRules
 from fleek_agents.domain.money import Pence
+from fleek_agents.domain.offers import Terms
 from fleek_agents.domain.state import Actor, Move, NegotiationState
 from fleek_agents.orchestrator.clock import FakeClock
 from fleek_agents.orchestrator.rounds import (
     BackwardsConcession,
     RoundLimitReached,
-    Terms,
     expire_due,
     send_card,
 )

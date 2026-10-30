@@ -6,15 +6,11 @@ ahead a round.
 """
 
 from collections.abc import Iterable
-from datetime import date, timedelta
-from typing import Annotated
-
-from pydantic import Field, StrictBool, StrictInt
+from datetime import timedelta
 
 from fleek_agents.config import NegotiationRules
 from fleek_agents.domain.events import Event
-from fleek_agents.domain.models import DomainModel, PenceField
-from fleek_agents.domain.offers import OfferCard, ReasonCode, Role
+from fleek_agents.domain.offers import OfferCard, Role, Terms
 from fleek_agents.domain.state import Actor, Move, NegotiationState
 from fleek_agents.orchestrator.clock import Clock
 from fleek_agents.store.events import EventLog
@@ -23,16 +19,6 @@ SIDES = {
     Actor.BUYER_AGENT: (Role.BUYER, Move.OFFER),
     Actor.SELLER_AGENT: (Role.SELLER, Move.COUNTER),
 }
-
-
-class Terms(DomainModel):
-    """What an agent decides. Everything else on the card is filled in by the harness."""
-
-    base_price: PenceField
-    bundles: Annotated[StrictInt, Field(gt=0)]
-    prepaid: StrictBool
-    ship_by: date
-    reason_codes: tuple[ReasonCode, ...] = ()
 
 
 class RoundLimitReached(Exception):
