@@ -8,6 +8,8 @@ Buyer and seller agents that negotiate bulk secondhand-clothing deals for Fleek.
 
 > Work in progress, built in small steps. The pull requests show the history.
 
+Who it's for and what we assume about Fleek's buyers and sellers: [docs/ASSUMPTIONS.md](docs/ASSUMPTIONS.md).
+
 ## Run the checks
 
 You need [uv](https://docs.astral.sh/uv/). It installs Python 3.12 and the tools for you.
@@ -39,3 +41,4 @@ key in the Anthropic Console and make a new one.
 | `src/fleek_agents/` | the code |
 | `tests/` | the tests |
 | `scripts/` | dev tools, such as the API key scan |
+| `docs/` | assumptions, and later the design decisions |
