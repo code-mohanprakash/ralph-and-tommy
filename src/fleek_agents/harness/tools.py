@@ -17,7 +17,7 @@ from fleek_agents.domain.bands import Band
 from fleek_agents.domain.models import DomainModel
 from fleek_agents.domain.money import Pence
 from fleek_agents.domain.offers import BUYER_REASONS, SELLER_REASONS, ReasonCode, Terms
-from fleek_agents.harness.loop import Tool
+from fleek_agents.harness.loop import Tool, ToolRefused
 
 SHIP_BY = timedelta(days=21)
 MEANING = {
@@ -102,7 +102,13 @@ def tools_for(view: View) -> list[Tool]:
     buyer = view.want is not None
     offer_model: type[_Offer] = BuyerOffer if buyer else SellerCounter
 
+    checks_left = [1]  # one band check per turn, and each turn is one round
+
     def check(price: PriceCheck) -> str:
+        # Unlimited checks would let an agent binary-search its way to the exact limit.
+        if checks_left[0] == 0:
+            raise ToolRefused("check_price answers once per round. Decide with what you know.")
+        checks_left[0] -= 1
         band = view.band(Pence(price.price_pence))
         return json.dumps({"band": band.value, "meaning": MEANING[band]})
 
@@ -121,7 +127,7 @@ def tools_for(view: View) -> list[Tool]:
         ),
         Tool(
             "check_price",
-            "How a base price per piece sits against your own limit, as one word. Never a number.",
+            "How a base price per piece sits against your own limit, as one word. Once per round.",
             PriceCheck,
             run=lambda p: check(p),  # type: ignore[arg-type]
         ),

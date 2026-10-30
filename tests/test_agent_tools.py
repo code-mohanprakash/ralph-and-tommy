@@ -9,7 +9,7 @@ from fleek_agents.config import BandThresholds
 from fleek_agents.domain.bands import Band
 from fleek_agents.domain.money import Pence
 from fleek_agents.domain.offers import ReasonCode
-from fleek_agents.harness.loop import Tool
+from fleek_agents.harness.loop import Tool, ToolRefused
 from fleek_agents.harness.tools import (
     BuyerOffer,
     NoInput,
@@ -60,8 +60,9 @@ def look(tool: Tool, given: BaseModel) -> str:
 def test_no_look_up_ever_returns_a_secret(buyer: bool) -> None:
     tools = {t.name: t for t in tools_for(view(buyer))}
     outputs = [look(tools["get_lot"], NoInput()), look(tools["get_history"], NoInput())]
-    for price in range(100, 3000, 7):  # sweep prices around both limits
-        outputs.append(look(tools["check_price"], PriceCheck(price_pence=price)))
+    for price in range(100, 3000, 7):  # sweep prices around both limits, a fresh turn each
+        check = next(t for t in tools_for(view(buyer)) if t.name == "check_price")
+        outputs.append(look(check, PriceCheck(price_pence=price)))
     for text in outputs:
         for secret in (str(MAX), "18.73", str(FLOOR), "11.37"):
             assert secret not in text, f"{secret} leaked: {text}"
@@ -126,3 +127,17 @@ def test_reason_codes_are_typed() -> None:
         {"price_pence": 1000, "prepaid": False, "reason_codes": ["bulk"]}
     )
     assert offer.reason_codes == (ReasonCode.BULK,)
+
+
+def test_only_one_price_check_per_turn() -> None:
+    tools = {t.name: t for t in tools_for(view(True))}
+    first = json.loads(look(tools["check_price"], PriceCheck(price_pence=1000)))
+    assert first["band"] in {b.value for b in Band}
+    with pytest.raises(ToolRefused, match="once per round"):
+        look(tools["check_price"], PriceCheck(price_pence=1001))
+
+
+def test_a_new_turn_gets_a_new_check() -> None:
+    for _ in range(2):  # tools are built fresh for every turn
+        tools = {t.name: t for t in tools_for(view(True))}
+        look(tools["check_price"], PriceCheck(price_pence=1000))

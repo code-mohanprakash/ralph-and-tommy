@@ -1,7 +1,7 @@
 import pytest
 from pydantic import BaseModel, ConfigDict
 
-from fleek_agents.harness.loop import Outcome, Tool, TurnResult, take_turn
+from fleek_agents.harness.loop import Outcome, Tool, ToolRefused, TurnResult, take_turn
 from tests.fakes import FakeClient, call, message, text
 
 
@@ -137,3 +137,17 @@ def test_a_correction_gives_plain_reasons_not_a_dump_of_the_input() -> None:
     turn(client)
     error = client.requests[1]["messages"][-1]["content"][0]["content"]
     assert "price_pence" in error and "twelve pounds" not in error
+
+
+def test_a_refused_look_up_is_answered_as_an_error_without_counting_as_a_mistake() -> None:
+    def once_only(_: BaseModel) -> str:
+        raise ToolRefused("Only once per round.")
+
+    limited = Tool(name="check_price", description="Band.", input_model=NoInput, run=once_only)
+    client = FakeClient(message(call("check_price", {})), message(call("walk_away", {})))
+    result = take_turn(
+        client, model="claude-haiku-5-5", system="s", prompt="p", tools=[limited, WALK]
+    )
+    refused = client.requests[1]["messages"][-1]["content"][0]
+    assert refused["is_error"] is True and "once per round" in refused["content"]
+    assert result.corrections == 0 and result.outcome is Outcome.ACTION

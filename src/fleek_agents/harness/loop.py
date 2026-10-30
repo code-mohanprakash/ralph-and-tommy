@@ -42,6 +42,10 @@ class Tool:
         }
 
 
+class ToolRefused(Exception):
+    """A look-up the rules won't answer right now. The model is told why; it isn't a mistake."""
+
+
 class Outcome(StrEnum):
     ACTION = "action"
     NEEDS_HUMAN = "needs_human"  # too many corrections
@@ -159,9 +163,12 @@ def take_turn(
                 continue
             result.lookups += 1
             assert tool.run is not None  # Tool.__post_init__ already checks this; tells mypy
-            replies.append(
-                {"type": "tool_result", "tool_use_id": use.id, "content": tool.run(parsed)}
-            )
+            try:
+                answer = tool.run(parsed)
+            except ToolRefused as refusal:
+                replies.append(_error(use.id, str(refusal)))
+                continue
+            replies.append({"type": "tool_result", "tool_use_id": use.id, "content": answer})
 
         if failed:
             if not correct(replies):
