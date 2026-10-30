@@ -256,3 +256,34 @@ def reject(
     session, _ = _session(db, 2026)
     reject_deal(EventLog(session), negotiation, at=datetime.now(UTC))
     Console().print(f"{negotiation} rejected. The lot is back on sale.")
+
+
+@app.command()
+def digest(
+    db: Annotated[str, typer.Option(help="The deals file.")] = "fleek.db",
+    seed: Annotated[int, typer.Option(help="Which seeded market.")] = 2026,
+) -> None:
+    """The account managers' call list: failed negotiations that came close, biggest first."""
+    from fleek_agents.humans.digest import call_list
+
+    session, lots = _session(db, seed)
+    items = call_list(EventLog(session), lots, Settings().digest)
+    console = Console()
+    if not items:
+        console.print("No near misses to call about.")
+        return
+    table = Table(
+        "Negotiation", "Buyer", "Lot", "Ended", "Last offer", "Last counter", "Gap", "Worth"
+    )
+    for i in items:
+        table.add_row(
+            i.negotiation_id,
+            i.buyer_id,
+            i.lot_title,
+            i.ended,
+            str(i.last_offer),
+            str(i.last_counter),
+            f"{i.gap_pct}%",
+            str(i.value),
+        )
+    console.print(table)
