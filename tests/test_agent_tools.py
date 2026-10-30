@@ -1,3 +1,4 @@
+import dataclasses
 import json
 from datetime import date
 
@@ -141,3 +142,12 @@ def test_a_new_turn_gets_a_new_check() -> None:
     for _ in range(2):  # tools are built fresh for every turn
         tools = {t.name: t for t in tools_for(view(True))}
         look(tools["check_price"], PriceCheck(price_pence=1000))
+
+
+def test_ralph_can_compare_his_other_deals_when_he_has_some() -> None:
+    alone = {t.name for t in tools_for(view(True))}
+    assert "compare_open_deals" not in alone
+    busy = dataclasses.replace(view(True), elsewhere=("Lot B: countered; your last offer £4.70",))
+    tools = {t.name: t for t in tools_for(busy)}
+    answer = json.loads(look(tools["compare_open_deals"], NoInput()))
+    assert answer == {"other_deals": ["Lot B: countered; your last offer £4.70"]}
