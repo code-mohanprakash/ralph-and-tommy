@@ -42,6 +42,8 @@ PenceField = Annotated[
 
 LotId = Annotated[StrictStr, Field(pattern=r"^lot-[0-9]+$")]
 SellerId = Annotated[StrictStr, Field(pattern=r"^seller-[0-9]+$")]
+BuyerId = Annotated[StrictStr, Field(pattern=r"^buyer-[0-9]+$")]
+CountryCode = Annotated[StrictStr, Field(pattern=r"^[A-Z]{2}$")]  # e.g. GB, PK
 Text = Annotated[StrictStr, Field(min_length=1, max_length=200)]
 
 
@@ -49,6 +51,14 @@ class DomainModel(BaseModel):
     """Shared rules: can't be changed once made, and unknown fields are refused."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
+
+
+class BuyerKind(StrEnum):
+    """The buyers named in Fleek's brief."""
+
+    ONLINE_RESELLER = "online_reseller"  # sells on Vinted, Depop, eBay, Whatnot
+    VINTAGE_SHOP = "vintage_shop"
+    ENTERPRISE = "enterprise"
 
 
 class Grade(StrEnum):
@@ -90,3 +100,22 @@ class Lot(DomainModel):
     def listed_price(self) -> Pence:
         """The price per piece a buyer sees: base price plus shipping."""
         return self.base_price + self.shipping
+
+
+# Neither Buyer nor Seller has a field for their secret limit. The buyer's max and the seller's
+# floor live only in the vault, so these models can be shown to an agent safely.
+
+
+class Buyer(DomainModel):
+    id: BuyerId
+    name: Text
+    kind: BuyerKind
+    country: CountryCode
+
+
+class Seller(DomainModel):
+    id: SellerId
+    name: Text
+    country: CountryCode
+    quality_score: Annotated[float, Field(ge=0, le=5)]  # public on Fleek, out of 5
+    dispatch_days: Annotated[StrictInt, Field(ge=0)]  # usual days to hand over an order

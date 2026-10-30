@@ -1,7 +1,15 @@
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from fleek_agents.domain.models import Grade, ListingType, Lot, PenceField
+from fleek_agents.domain.models import (
+    Buyer,
+    BuyerKind,
+    Grade,
+    ListingType,
+    Lot,
+    PenceField,
+    Seller,
+)
 from fleek_agents.domain.money import Pence
 
 
@@ -97,3 +105,51 @@ def test_a_lot_cant_be_changed_after_it_is_made() -> None:
 def test_a_lot_survives_a_round_trip_through_json() -> None:
     lot = Lot.model_validate(a_lot())
     assert Lot.model_validate_json(lot.model_dump_json()) == lot
+
+
+def test_a_buyer_is_read_from_plain_data() -> None:
+    buyer = Buyer.model_validate(
+        {"id": "buyer-0001", "name": "Brick Lane Vintage", "kind": "vintage_shop", "country": "GB"}
+    )
+    assert buyer.kind is BuyerKind.VINTAGE_SHOP
+
+
+def test_a_seller_is_read_from_plain_data() -> None:
+    seller = Seller.model_validate(
+        {
+            "id": "seller-01",
+            "name": "Karachi Denim Co",
+            "country": "PK",
+            "quality_score": 4.6,
+            "dispatch_days": 2,
+        }
+    )
+    assert seller.quality_score == 4.6
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [{"kind": "wholesaler"}, {"country": "gb"}, {"country": "GBR"}, {"id": "seller-01"}],
+)
+def test_a_buyer_with_bad_data_is_refused(bad: dict[str, object]) -> None:
+    buyer = {"id": "buyer-0001", "name": "Brick Lane Vintage", "kind": "vintage_shop"}
+    with pytest.raises(ValidationError):
+        Buyer.model_validate(buyer | {"country": "GB"} | bad)
+
+
+@pytest.mark.parametrize(
+    "bad", [{"quality_score": 5.1}, {"quality_score": -1}, {"dispatch_days": -1}]
+)
+def test_a_seller_with_bad_data_is_refused(bad: dict[str, object]) -> None:
+    seller = {"id": "seller-01", "name": "Karachi Denim Co", "country": "PK"}
+    with pytest.raises(ValidationError):
+        Seller.model_validate(seller | {"quality_score": 4.6, "dispatch_days": 2} | bad)
+
+
+@pytest.mark.parametrize("model", [Buyer, Seller, Lot])
+def test_no_model_has_a_field_for_a_secret_limit(model: type[BaseModel]) -> None:
+    # The buyer's max and the seller's floor live only in the vault. If a field like this is
+    # ever added here, it could end up in front of an agent.
+    secret_words = ("max", "floor", "limit", "budget", "reserve", "minimum")
+    for field in model.model_fields:
+        assert not any(word in field for word in secret_words), f"{model.__name__}.{field}"
