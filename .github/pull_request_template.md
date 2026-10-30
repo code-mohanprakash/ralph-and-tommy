@@ -14,6 +14,6 @@
 
 <!-- What's left for later, on purpose. -->
 
-## What I checked myself
+## Checked before merging
 
-<!-- One line in your own words: what you ran or read to be sure this works. -->
+<!-- What was run or read to be sure this works: CI, a fresh clone, a manual try. -->
