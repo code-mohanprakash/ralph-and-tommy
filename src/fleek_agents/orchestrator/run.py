@@ -66,6 +66,7 @@ def run_negotiation(
             history=history,
             rounds_left=rules.max_rounds - snap.cards,
             band=buyer_band_of if buyers_turn else seller_band_of,
+            today=clock.now().date(),
         )
         action = (ralph if buyers_turn else tommy).decide(view)
 
