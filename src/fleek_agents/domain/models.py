@@ -148,3 +148,23 @@ class Seller(DomainModel):
     quality_score: Annotated[float, Field(ge=0, le=5)]  # public on Fleek, out of 5
     dispatch_days: Annotated[StrictInt, Field(ge=0)]  # usual days to hand over an order
     bulk_rules: BulkRules = BulkRules()
+
+
+class Want(DomainModel):
+    """What a buyer is looking for. One per buyer in the seeded market."""
+
+    buyer_id: BuyerId
+    category: Text
+    brands: tuple[Text, ...] = ()  # empty means any brand
+    grades: Annotated[tuple[Grade, ...], Field(min_length=1)]
+    pieces: Annotated[StrictInt, Field(gt=0)]
+    text: Annotated[StrictStr, Field(max_length=300)]  # in the buyer's own words
+
+
+class Market(DomainModel):
+    """Everything public about the marketplace. The secret limits are held separately."""
+
+    buyers: tuple[Buyer, ...]
+    sellers: tuple[Seller, ...]
+    lots: tuple[Lot, ...]
+    wants: tuple[Want, ...]
