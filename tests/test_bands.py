@@ -3,8 +3,9 @@ import random
 import pytest
 from pydantic import ValidationError
 
+from fleek_agents.config import BandThresholds
 from fleek_agents.domain.money import Pence
-from fleek_agents.vault.bands import Band, BandThresholds, band_of, buyer_band, seller_band
+from fleek_agents.vault.bands import Band, band_of, buyer_band, seller_band
 from fleek_agents.vault.checks import buyer_ok, seller_ok
 from fleek_agents.vault.mandate import BuyerMandate, SellerMandate
 from fleek_agents.vault.secret import SecretMoney
