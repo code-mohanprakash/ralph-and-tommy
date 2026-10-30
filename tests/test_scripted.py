@@ -125,6 +125,7 @@ def test_an_agent_s_view_holds_no_secret_field() -> None:
         "rounds_left",
         "band",
         "today",
+        "elsewhere",
     }
 
 

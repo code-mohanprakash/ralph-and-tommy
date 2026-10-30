@@ -52,6 +52,7 @@ class View:
     rounds_left: int  # cards that can still be sent
     band: Callable[[Pence], Band]  # how a price sits against *my own* limit
     today: date
+    elsewhere: tuple[str, ...] = ()  # the buyer's other open deals, one line each (buyer only)
 
     @property
     def on_table(self) -> OfferCard | None:
