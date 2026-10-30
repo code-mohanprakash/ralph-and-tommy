@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from fleek_agents.config import BandThresholds, NegotiationRules, load_settings
+from fleek_agents.config import BandThresholds, NegotiationRules, Spending, load_settings
 
 
 def test_the_thresholds_come_from_market_toml() -> None:
@@ -23,3 +23,9 @@ def test_the_negotiation_rules_come_from_market_toml() -> None:
     assert settings.negotiation == NegotiationRules(
         max_rounds=6, answer_hours=48, cooldown_hours=24
     )
+
+
+def test_spend_caps_and_prices_come_from_market_toml() -> None:
+    settings = load_settings(Path(__file__).parents[1] / "market.toml")
+    assert settings.spending == Spending()
+    assert settings.spending.prices["claude-haiku-5-5"].output_cents_per_mtok == 50
