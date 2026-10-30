@@ -11,11 +11,12 @@ from fleek_agents.domain.money import Pence
 from fleek_agents.domain.offers import Terms
 from fleek_agents.domain.state import Actor, Move, NegotiationState
 from fleek_agents.humans.digest import call_list
+from fleek_agents.orchestrator.approval import approve
 from fleek_agents.orchestrator.clock import FakeClock
 from fleek_agents.orchestrator.opening import open_negotiation
 from fleek_agents.orchestrator.rounds import send_card
 from fleek_agents.store.db import Base, make_engine
-from fleek_agents.store.deals import put_on_sale
+from fleek_agents.store.deals import accept, put_on_sale
 from fleek_agents.store.events import EventLog
 from tests.test_scripted import LOT
 
@@ -75,9 +76,16 @@ def test_a_deal_handed_to_a_person_says_why(log: EventLog) -> None:
 
 
 def test_live_and_agreed_deals_aren_t_near_misses(log: EventLog) -> None:
-    haggle(log, 1, offer=1150, counter=1200)  # still countered, not over
-    assert log.state("neg-0001") is NegotiationState.COUNTERED
-    assert call_list(log, lots(1), RULES) == []
+    live = haggle(log, 1, offer=1150, counter=1200)  # still countered, not over
+    agreed = haggle(log, 2, offer=1150, counter=1200)
+    accept(log, agreed, lot_id="lot-0002", by=Actor.BUYER_AGENT, at=T0)
+    closed = haggle(log, 3, offer=1150, counter=1200)
+    accept(log, closed, lot_id="lot-0003", by=Actor.BUYER_AGENT, at=T0)
+    approve(log, closed, at=T0)
+    assert log.state(live) is NegotiationState.COUNTERED
+    assert log.state(agreed) is NegotiationState.PENDING_APPROVAL
+    assert log.state(closed) is NegotiationState.CLOSED
+    assert call_list(log, lots(3), RULES) == []
 
 
 def test_the_list_holds_only_what_both_sides_saw() -> None:
