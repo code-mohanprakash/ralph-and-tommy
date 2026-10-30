@@ -1,9 +1,9 @@
 """Tool schemas for strict mode, made from the Pydantic models.
 
-Strict mode makes the API guarantee the model's tool input matches the schema, but it only
+Strict mode makes the API enforce that the model's tool input matches the schema, but it only
 accepts part of JSON Schema: no number limits, no length limits, no patterns. Those are dropped
 from what's sent and still checked by Pydantic when the input comes back; a failure goes back to
-the model as a correction. So the API guarantees the shape, and our code guarantees the rest.
+the model as a correction. So the API enforces the shape, and our code checks the rest.
 """
 
 from typing import Any

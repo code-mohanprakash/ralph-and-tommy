@@ -66,3 +66,21 @@ def test_a_turn_that_hits_the_cap_goes_to_a_person() -> None:
     )
     assert result.outcome is Outcome.SPEND_CAP
     assert ledger.spent <= ledger.cap_microcents
+
+
+def test_cache_writes_are_charged_at_the_highest_write_price() -> None:
+    # A cache write can cost up to 2x the input price (1-hour caching); a read costs less than
+    # 1x. Charging writes at 2x and reads at 1x means the ledger never understates.
+    usage = {
+        "input_tokens": 100,
+        "output_tokens": 0,
+        "cache_creation_input_tokens": 1000,
+        "cache_read_input_tokens": 1000,
+    }
+    reply = message(call("walk_away", {}))
+    reply = reply.model_copy(update={"usage": reply.usage.model_copy(update=usage)})
+    ledger = Ledger(cap_microcents=10**9)
+    BudgetedClient(FakeClient(reply), ledger, SPENDING).create(
+        model="claude-haiku-5-5", max_tokens=10, messages=[]
+    )
+    assert ledger.spent == (100 + 2 * 1000 + 1000) * 10
