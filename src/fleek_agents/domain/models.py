@@ -16,6 +16,7 @@ from pydantic import (
     StrictInt,
     StrictStr,
     WithJsonSchema,
+    model_validator,
 )
 
 from fleek_agents.domain.money import Pence
@@ -113,9 +114,37 @@ class Buyer(DomainModel):
     country: CountryCode
 
 
+class BulkTier(DomainModel):
+    """Buy at least `min_pieces` in one order and the base price drops by `percent_off`."""
+
+    min_pieces: Annotated[StrictInt, Field(gt=0)]
+    percent_off: Annotated[StrictInt, Field(ge=0, le=100)]
+
+
+class BulkRules(DomainModel):
+    """A seller's bulk discounts. Public, like on Fleek's listings, and applied by code."""
+
+    tiers: tuple[BulkTier, ...] = ()
+
+    @model_validator(mode="after")
+    def _tiers_make_sense(self) -> "BulkRules":
+        for smaller, bigger in zip(self.tiers, self.tiers[1:], strict=False):
+            if bigger.min_pieces <= smaller.min_pieces:
+                raise ValueError("Tiers must go from fewest pieces to most, each size once")
+            if bigger.percent_off < smaller.percent_off:
+                raise ValueError("Buying more must never cost more per piece")
+        return self
+
+    def percent_off(self, pieces: int) -> int:
+        """The discount for an order of `pieces`: the biggest tier it reaches, else 0."""
+        reached = [tier.percent_off for tier in self.tiers if pieces >= tier.min_pieces]
+        return max(reached, default=0)
+
+
 class Seller(DomainModel):
     id: SellerId
     name: Text
     country: CountryCode
     quality_score: Annotated[float, Field(ge=0, le=5)]  # public on Fleek, out of 5
     dispatch_days: Annotated[StrictInt, Field(ge=0)]  # usual days to hand over an order
+    bulk_rules: BulkRules = BulkRules()
