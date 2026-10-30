@@ -9,6 +9,7 @@ Buyer and seller agents that negotiate bulk secondhand-clothing deals for Fleek.
 > Work in progress, built in small steps. The pull requests show the history.
 
 Who it's for and what we assume about Fleek's buyers and sellers: [docs/ASSUMPTIONS.md](docs/ASSUMPTIONS.md).
+Why the secret limits never go into the AI: [decision 001](docs/decisions/001-secrets-never-enter-the-model.md).
 
 ## Run the checks
 
@@ -41,4 +42,4 @@ key in the Anthropic Console and make a new one.
 | `src/fleek_agents/` | the code |
 | `tests/` | the tests |
 | `scripts/` | dev tools, such as the API key scan |
-| `docs/` | assumptions, and later the design decisions |
+| `docs/` | assumptions and design decisions (`docs/decisions/`) |
