@@ -30,8 +30,8 @@ sent anywhere).
 | Rank **every** lot for **all** 500 wants | 46 ms in total, about 92 µs per want |
 | Memory for the lot vectors | 2.3 MB (1,494 × 384 numbers) |
 
-And the funnel only ranks what's left after the cheap steps: a buyer has 62 candidates on
-average, not 1,494.
+And the funnel only ranks what's left after the cheap steps: after the SQL filters and skipping
+impossible deals, a buyer has about 47 candidates on average (23,348 for 500 buyers), not 1,494.
 
 ## When to change
 
