@@ -164,7 +164,8 @@ def safety_report(
         rows.append(Row(name, "naive seller", str(result.leak or "no"), False, first_sentences))
 
     channel = text_channel_check()
-    rows.append(Row("all four text attacks", "protected seller", "no channel", False, channel))
+    leaked = "no channel" if channel.startswith("refused") else "OPEN"
+    rows.append(Row("all four text attacks", "protected seller", leaked, False, channel))
 
     progress("planted listing")
     poisoned = DEMO_LOT.model_copy(update={"description": PLANTED_DESCRIPTION})
@@ -193,5 +194,13 @@ def safety_report(
     note = f"countered {', '.join(counters)}"
     if blocked:
         note += "; then tried a counter below the floor: the harness refused to send it"
-    rows.append(Row("probing bot", "protected seller", "no", _breach(log, nid, DEMO_LOT), note))
+    rows.append(
+        Row(
+            "probing bot",
+            "protected seller",
+            "no (holds no number)",
+            _breach(log, nid, DEMO_LOT),
+            note,
+        )
+    )
     return rows
