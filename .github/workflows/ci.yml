@@ -1,0 +1,17 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    name: lint, types, tests, key scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+      # --locked: fail if uv.lock doesn't match pyproject.toml, instead of quietly updating it.
+      - run: uv sync --locked
+      - run: make check
