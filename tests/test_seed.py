@@ -79,3 +79,11 @@ def test_floors_sit_below_what_the_seller_would_net_at_the_listed_price() -> Non
     for lot in MARKET.lots:
         net_at_list = lot.base_price.value * 85 / 100
         assert secrets.lots[lot.id].floor_per_piece.reveal().value <= net_at_list
+
+
+def test_every_buyer_has_a_budget_for_what_they_want() -> None:
+    secrets = generate_mandates(MARKET, seed=2026)
+    for want in MARKET.wants:
+        mandate = secrets.buyers[want.buyer_id]
+        assert mandate.budget is not None
+        assert mandate.budget.reveal() == mandate.max_per_piece.reveal().times(want.pieces)

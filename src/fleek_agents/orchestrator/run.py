@@ -6,12 +6,14 @@ vault's can_accept (both limits), and the atomic accept (stock). An accept outsi
 is refused and handed to a person: the agent doesn't get to break a limit by trying.
 """
 
+from collections.abc import Callable
 from datetime import timedelta
 
 from fleek_agents.agents.base import Accept, Agent, HandOff, Send, View, WalkAway
 from fleek_agents.config import Settings
 from fleek_agents.domain.bands import Band
 from fleek_agents.domain.events import EscalationReason
+from fleek_agents.domain.fees import buyer_pays
 from fleek_agents.domain.models import Lot, Seller, Want
 from fleek_agents.domain.money import Pence
 from fleek_agents.domain.rules import quote
@@ -25,6 +27,18 @@ from fleek_agents.vault.checks import can_accept
 from fleek_agents.vault.mandate import BuyerMandate, SellerMandate
 
 THINKING = timedelta(hours=1)  # simulated time between turns
+
+
+def _order_total(action: Send | Accept, view: View, lot: Lot) -> Pence:
+    """What the buyer would be committing: their new offer, or the counter they'd accept."""
+    price = action.terms.base_price if isinstance(action, Send) else None
+    bundles = action.terms.bundles if isinstance(action, Send) else view.bundles
+    if price is None:
+        card = view.on_table
+        if card is None:
+            return Pence(0)
+        price, bundles = card.base_price, card.bundles
+    return buyer_pays(base_price=price, shipping=lot.shipping, pieces=bundles * lot.pieces).total
 
 
 def run_negotiation(
@@ -41,6 +55,7 @@ def run_negotiation(
     tommy: Agent,
     clock: FakeClock,
     settings: Settings,
+    within_budget: Callable[[Pence], bool] = lambda _: True,
 ) -> NegotiationState:
     q = quote(lot, seller, bundles=bundles)
     pieces, rules, t = q.pieces, settings.negotiation, settings.bands
@@ -70,7 +85,20 @@ def run_negotiation(
         )
         action = (ralph if buyers_turn else tommy).decide(view)
 
-        if isinstance(action, Send):
+        # The buyer's offers and accepts must fit their budget across all their deals.
+        if (
+            buyers_turn
+            and isinstance(action, (Send, Accept))
+            and not within_budget(_order_total(action, view, lot))
+        ):
+            log.append(
+                negotiation_id,
+                Move.ESCALATE,
+                by=Actor.SYSTEM,
+                at=clock.now(),
+                reason=EscalationReason.OVER_BUDGET,
+            )
+        elif isinstance(action, Send):
             send_card(log, negotiation_id, by=actor, terms=action.terms, clock=clock, rules=rules)
         elif isinstance(action, Accept):
             card = view.on_table
