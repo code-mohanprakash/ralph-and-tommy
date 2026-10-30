@@ -14,6 +14,7 @@ from typing import Any
 from anthropic.types.beta import BetaMessage
 from pydantic import BaseModel, ValidationError
 
+from fleek_agents.harness.schemas import strict_schema
 from fleek_agents.llm.client import LLMClient
 
 NEED_ONE_ACTION = "End your turn with exactly one action tool call, and nothing else alongside it."
@@ -35,7 +36,8 @@ class Tool:
         return {
             "name": self.name,
             "description": self.description,
-            "input_schema": self.input_model.model_json_schema(),
+            "input_schema": strict_schema(self.input_model),
+            "strict": True,
         }
 
 
