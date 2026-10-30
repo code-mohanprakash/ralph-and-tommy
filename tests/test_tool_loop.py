@@ -127,3 +127,13 @@ def test_a_look_up_must_have_something_to_run_and_an_action_must_not() -> None:
         Tool(
             name="walk_away", description="x", input_model=NoInput, is_action=True, run=lambda _: ""
         )
+
+
+def test_a_correction_gives_plain_reasons_not_a_dump_of_the_input() -> None:
+    client = FakeClient(
+        message(call("send_offer", {"price_pence": "twelve pounds"})),
+        message(call("send_offer", {"price_pence": 1200})),
+    )
+    turn(client)
+    error = client.requests[1]["messages"][-1]["content"][0]["content"]
+    assert "price_pence" in error and "twelve pounds" not in error

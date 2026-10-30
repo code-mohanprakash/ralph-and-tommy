@@ -61,6 +61,15 @@ class TurnResult:
     messages: list[dict[str, Any]] = field(default_factory=list)
 
 
+def _reasons(error: ValidationError) -> str:
+    """Plain reasons, one per problem. Not the input itself: the model already has that."""
+    problems = []
+    for e in error.errors(include_url=False, include_input=False, include_context=False):
+        where = ".".join(str(part) for part in e["loc"]) or "input"
+        problems.append(f"{where}: {e['msg']}")
+    return "; ".join(problems)
+
+
 def _error(block_id: str, why: str) -> dict[str, Any]:
     return {"type": "tool_result", "tool_use_id": block_id, "content": why, "is_error": True}
 
@@ -137,9 +146,7 @@ def take_turn(
             try:
                 parsed = tool.input_model.model_validate(use.input)
             except ValidationError as error:
-                replies.append(
-                    _error(use.id, f"Input didn't fit: {error.errors(include_url=False)}")
-                )
+                replies.append(_error(use.id, f"Input didn't fit: {_reasons(error)}"))
                 failed = True
                 continue
             if tool.is_action:
