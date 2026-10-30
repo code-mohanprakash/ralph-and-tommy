@@ -96,6 +96,21 @@ def test_accepting_a_lot_that_has_gone_is_told_sold(log: EventLog) -> None:
     assert stock_left(log.session, LOT) == 0
 
 
+def test_accepting_just_after_losing_the_lot_is_told_sold_not_an_error(log: EventLog) -> None:
+    # The timing that the 10-buyer race hit once: the winner has already marked this
+    # negotiation lost before its buyer's accept reads the state.
+    put_on_sale(log.session, LOT, bundles=1)
+    countered(log, "neg-0001")
+    countered(log, "neg-0002")
+    accept(log, "neg-0001", lot_id=LOT, by=A.BUYER_AGENT, at=T0, rivals=["neg-0002"])
+    assert log.state("neg-0002") is S.LOST_TO_OTHER_BUYER
+
+    outcome = accept(log, "neg-0002", lot_id=LOT, by=A.BUYER_AGENT, at=T0)
+
+    assert outcome is AcceptOutcome.SOLD_OUT
+    assert len(log.read("neg-0002")) == 4  # no extra event
+
+
 def test_a_pool_lot_stays_open_while_bundles_are_left(log: EventLog) -> None:
     put_on_sale(log.session, LOT, bundles=3)
     countered(log, "neg-0001", bundles=2)

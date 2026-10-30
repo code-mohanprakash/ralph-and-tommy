@@ -53,6 +53,9 @@ def accept(
     session = log.session
     try:
         snapshot = log.saved(negotiation_id)
+        if snapshot.state is NegotiationState.LOST_TO_OTHER_BUYER:
+            # Another buyer won a moment ago and already told this negotiation. Same answer.
+            return AcceptOutcome.SOLD_OUT
         on_table = {
             NegotiationState.OFFERED: snapshot.last_offer,
             NegotiationState.COUNTERED: snapshot.last_counter,
