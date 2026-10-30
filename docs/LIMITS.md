@@ -25,6 +25,8 @@ recordings).
 | A model call that could break a spend cap is never made | [`tests/test_budget.py`](../tests/test_budget.py) |
 | Refusals, repeated bad output and the spend cap go to a person, with the reason | [`tests/test_escalation.py`](../tests/test_escalation.py), [`tests/test_budget.py`](../tests/test_budget.py) |
 | Every line `fleek negotiate` prints passes the leak scanner | [`tests/test_cli.py`](../tests/test_cli.py), [`tests/test_scanner.py`](../tests/test_scanner.py) |
+| An exported run holds no amount at or near a secret limit (floor, max or budget), as a number or inside text | [`tests/test_export.py`](../tests/test_export.py), with planted secrets the check must find |
+| Editing `market.toml` changes what the commands do | [`tests/test_cli.py`](../tests/test_cli.py), [`tests/test_config.py`](../tests/test_config.py) |
 | Fees match an independent calculation to the penny | [`tests/test_properties.py`](../tests/test_properties.py) |
 | The results in EVALS.md come from the recordings in the repo | [`tests/test_sim.py`](../tests/test_sim.py) replays both Claude runs and checks the same results |
 
