@@ -151,7 +151,7 @@ def take_turn(
                 )
                 continue
             result.lookups += 1
-            assert tool.run is not None  # guaranteed by Tool.__post_init__; tells mypy
+            assert tool.run is not None  # Tool.__post_init__ already checks this; tells mypy
             replies.append(
                 {"type": "tool_result", "tool_use_id": use.id, "content": tool.run(parsed)}
             )

@@ -7,7 +7,9 @@ micro-cents, so the maths stays in whole numbers.
 Before each call the worst case is checked: if the call's maximum output alone could break a cap
 (the negotiation's or the whole run's), it isn't made. Input tokens aren't known in advance, so a
 call can still go over by its input cost; a cap is a ceiling with that small margin, not exact.
-Cached input tokens are charged at the full input price, which can only overstate the cost.
+Prompt caching changes input prices: writing to the cache costs more than plain input (up to 2x,
+for one-hour caching) and reading from it costs less. Writes are charged at 2x and reads at 1x,
+so the ledger can overstate the cost but never understate it.
 """
 
 from dataclasses import dataclass
@@ -17,6 +19,8 @@ from anthropic.types.beta import BetaMessage
 
 from fleek_agents.config import Spending
 from fleek_agents.llm.client import LLMClient
+
+CACHE_WRITE_MULTIPLIER = 2  # the highest cache-write price: one-hour caching, 2x input
 
 
 class SpendCapReached(Exception):
@@ -57,8 +61,10 @@ class BudgetedClient:
             raise SpendCapReached(f"{model} could cost more than is left under the cap")
         response = self._inner.create(**params)
         usage = response.usage
-        cached = (usage.cache_read_input_tokens or 0) + (usage.cache_creation_input_tokens or 0)
+        writes = (usage.cache_creation_input_tokens or 0) * CACHE_WRITE_MULTIPLIER
+        reads = usage.cache_read_input_tokens or 0
+        input_equivalent = usage.input_tokens + writes + reads
         self._ledger.charge(
-            cost_microcents(model, usage.input_tokens + cached, usage.output_tokens, self._spending)
+            cost_microcents(model, input_equivalent, usage.output_tokens, self._spending)
         )
         return response
