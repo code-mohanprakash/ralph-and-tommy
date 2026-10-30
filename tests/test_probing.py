@@ -1,5 +1,7 @@
+import threading
 from collections.abc import Iterator
 from datetime import UTC, date, datetime, timedelta
+from pathlib import Path
 
 import pytest
 from sqlalchemy.orm import Session
@@ -97,3 +99,36 @@ def test_negotiation_ids_are_new_each_time(log: EventLog) -> None:
         for n in range(1, 6)
     }
     assert len(ids) == 5
+
+
+def test_negotiations_opened_at_the_same_moment_get_different_ids(tmp_path: Path) -> None:
+    engine = make_engine(f"sqlite:///{tmp_path / 'ids.db'}")
+    Base.metadata.create_all(engine)
+    ids: list[str] = []
+    errors: list[BaseException] = []
+    start = threading.Barrier(10)
+
+    def opener(n: int) -> None:
+        try:
+            with Session(engine) as session:
+                log = EventLog(session)
+                start.wait()  # all ten at once
+                ids.append(
+                    open_negotiation(
+                        log,
+                        buyer_id=f"buyer-{n:04d}",
+                        lot_id="lot-0001",
+                        clock=FakeClock(T0),
+                        rules=RULES,
+                    )
+                )
+        except BaseException as error:  # report every failure from the thread
+            errors.append(error)
+
+    threads = [threading.Thread(target=opener, args=(n,)) for n in range(1, 11)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert errors == []
+    assert len(set(ids)) == 10
