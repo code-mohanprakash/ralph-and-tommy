@@ -9,6 +9,7 @@ from typing import Annotated, Self
 
 from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
 
+from fleek_agents.domain.fees import buyer_pays, seller_receives
 from fleek_agents.domain.money import Pence
 from fleek_agents.vault.mandate import BuyerMandate, SellerMandate
 
@@ -35,7 +36,7 @@ class BandThresholds(BaseModel):
         return self
 
 
-def _band(part: Pence, whole: Pence, t: BandThresholds) -> Band:
+def band_of(part: Pence, whole: Pence, t: BandThresholds) -> Band:
     """Band for part/whole, in whole numbers only: part*100 <= whole*pct, no division."""
     part100, whole_ = part.value * 100, whole.value
     if part100 <= whole_ * t.strong_pct:
@@ -47,11 +48,17 @@ def _band(part: Pence, whole: Pence, t: BandThresholds) -> Band:
     return Band.OUTSIDE
 
 
-def buyer_band(mandate: BuyerMandate, cost_per_piece: Pence, t: BandThresholds) -> Band:
-    """What the buyer would pay per piece, against their max."""
-    return _band(cost_per_piece, mandate.max_per_piece.reveal(), t)
+def buyer_band(
+    mandate: BuyerMandate, *, base_price: Pence, shipping: Pence, pieces: int, t: BandThresholds
+) -> Band:
+    """What the buyer would pay for the whole order, fees included, against max x pieces."""
+    cost = buyer_pays(base_price=base_price, shipping=shipping, pieces=pieces).total
+    return band_of(cost, mandate.max_per_piece.reveal().times(pieces), t)
 
 
-def seller_band(mandate: SellerMandate, proceeds_per_piece: Pence, t: BandThresholds) -> Band:
-    """The seller's floor, against what they would receive per piece. The mirror image."""
-    return _band(mandate.floor_per_piece.reveal(), proceeds_per_piece, t)
+def seller_band(
+    mandate: SellerMandate, *, base_price: Pence, pieces: int, t: BandThresholds
+) -> Band:
+    """The seller's floor x pieces, against their payout after commission. The mirror image."""
+    net = seller_receives(base_price=base_price, pieces=pieces).net
+    return band_of(mandate.floor_per_piece.reveal().times(pieces), net, t)
