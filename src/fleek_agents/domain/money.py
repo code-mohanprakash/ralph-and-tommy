@@ -7,7 +7,7 @@ be wrongly blocked, or one a penny over wrongly allowed. Whole pence make every 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 
 def _require_int(value: object, what: str) -> int:
@@ -56,6 +56,17 @@ class Pence:
         if _require_int(quantity, "Quantity") < 0:
             raise ValueError(f"Quantity can't be negative, got {quantity}")
         return Pence(self.value * quantity)
+
+    def discounted(self, percent: int) -> Pence:
+        """The price after a whole-percent discount, rounded to the nearest penny.
+
+        This is the only place money is rounded. Half a penny rounds up, as on a receipt:
+        £13.50 at 5% off is £12.825, which becomes £12.83.
+        """
+        if not 0 <= _require_int(percent, "Discount") <= 100:
+            raise ValueError(f"A discount must be 0 to 100 percent, got {percent}")
+        exact = Decimal(self.value) * (100 - percent) / 100
+        return Pence(int(exact.quantize(Decimal(1), rounding=ROUND_HALF_UP)))
 
     def __str__(self) -> str:
         pounds, pence = divmod(self.value, 100)

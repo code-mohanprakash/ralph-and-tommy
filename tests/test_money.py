@@ -85,3 +85,24 @@ def test_text_that_isnt_a_whole_number_of_pence_is_refused(text: str) -> None:
 def test_a_negative_price_in_pounds_is_refused() -> None:
     with pytest.raises(ValueError):
         Pence.from_pounds("-1.00")
+
+
+@pytest.mark.parametrize(
+    ("pence", "percent", "expected"),
+    [
+        (1350, 5, 1283),  # £13.50 at 5% off is £12.825, which rounds up to £12.83
+        (1350, 10, 1215),
+        (1350, 0, 1350),
+        (1350, 100, 0),
+        (1, 50, 1),  # half a penny rounds up
+        (3, 50, 2),  # 1.5p rounds up to 2p
+    ],
+)
+def test_a_discount_rounds_half_a_penny_up(pence: int, percent: int, expected: int) -> None:
+    assert Pence(pence).discounted(percent) == Pence(expected)
+
+
+@pytest.mark.parametrize("bad", [-1, 101, 2.5, True])
+def test_a_discount_must_be_a_whole_percent_from_0_to_100(bad: object) -> None:
+    with pytest.raises((TypeError, ValueError)):
+        Pence(1350).discounted(bad)  # type: ignore[arg-type]
