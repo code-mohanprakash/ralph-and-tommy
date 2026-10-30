@@ -4,10 +4,9 @@ from functools import cache
 import pytest
 
 from fleek_agents.domain.models import Grade, Want
-from fleek_agents.domain.rules import quote
+from fleek_agents.domain.rules import Candidate, quote
 from fleek_agents.market.seed import generate_market
 from fleek_agents.matching.embeddings import HashingEmbedder, LocalEmbedder
-from fleek_agents.matching.funnel import Candidate
 from fleek_agents.matching.ranking import rank, similarity
 
 MARKET = generate_market(seed=2026)
