@@ -57,9 +57,14 @@ class EventLog:
     def __init__(self, session: Session) -> None:
         self._session = session
 
+    @property
+    def session(self) -> Session:
+        return self._session
+
     def saved(self, negotiation_id: str) -> Snapshot:
         """The saved snapshot. A negotiation with no events yet is 'matched'."""
-        row = self._session.get(NegotiationRow, negotiation_id)
+        # Always read from the database, never a copy cached earlier in this session.
+        row = self._session.get(NegotiationRow, negotiation_id, populate_existing=True)
         if row is None:
             return Snapshot(negotiation_id=negotiation_id)
         return Snapshot.model_validate_json(row.data)
@@ -78,6 +83,20 @@ class EventLog:
         card: OfferCard | None = None,
     ) -> Event:
         """Save one move and the new snapshot together, if the rules allow the move."""
+        event = self.stage(negotiation_id, move, by=by, at=at, card=card)
+        self._session.commit()  # both rows, or neither
+        return event
+
+    def stage(
+        self,
+        negotiation_id: str,
+        move: Move,
+        *,
+        by: Actor,
+        at: datetime,
+        card: OfferCard | None = None,
+    ) -> Event:
+        """Like append, but leave the commit to the caller, to group several moves."""
         before = self.saved(negotiation_id)
         event = Event(
             negotiation_id=negotiation_id,
@@ -104,7 +123,7 @@ class EventLog:
                 id=negotiation_id, state=after.state, seq=after.seq, data=after.model_dump_json()
             )
         )
-        self._session.commit()  # both rows, or neither
+        self._session.flush()
         return event
 
     def read(self, negotiation_id: str) -> list[Event]:
