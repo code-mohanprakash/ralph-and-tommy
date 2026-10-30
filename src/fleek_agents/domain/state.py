@@ -59,7 +59,11 @@ ALLOWED: Mapping[tuple[NegotiationState, Move], tuple[NegotiationState, frozense
     (S.OFFERED, M.COUNTER): (S.COUNTERED, frozenset({A.SELLER_AGENT})),
     (S.OFFERED, M.ACCEPT): (S.PENDING_APPROVAL, frozenset({A.SELLER_AGENT})),
     (S.COUNTERED, M.ACCEPT): (S.PENDING_APPROVAL, frozenset({A.BUYER_AGENT})),
-    **{(state, M.WALK_AWAY): (S.WALKED_AWAY, AGENTS) for state in LIVE},
+    # Offers are binding: a side can't walk away while its own card is on the table, because the
+    # other side may still accept it. Otherwise a bot could offer, read the reply, and leave.
+    (S.OPEN, M.WALK_AWAY): (S.WALKED_AWAY, AGENTS),
+    (S.OFFERED, M.WALK_AWAY): (S.WALKED_AWAY, frozenset({A.SELLER_AGENT})),
+    (S.COUNTERED, M.WALK_AWAY): (S.WALKED_AWAY, frozenset({A.BUYER_AGENT})),
     **{(state, M.LOSE_LOT): (S.LOST_TO_OTHER_BUYER, frozenset({A.SYSTEM})) for state in LIVE},
     **{(state, M.ESCALATE): (S.NEEDS_HUMAN, frozenset({A.SYSTEM})) for state in LIVE},
     **{

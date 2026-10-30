@@ -9,7 +9,13 @@ from fleek_agents.config import NegotiationRules
 from fleek_agents.domain.money import Pence
 from fleek_agents.domain.state import Actor, Move, NegotiationState
 from fleek_agents.orchestrator.clock import FakeClock
-from fleek_agents.orchestrator.rounds import RoundLimitReached, Terms, expire_due, send_card
+from fleek_agents.orchestrator.rounds import (
+    BackwardsConcession,
+    RoundLimitReached,
+    Terms,
+    expire_due,
+    send_card,
+)
 from fleek_agents.store.db import Base, make_engine
 from fleek_agents.store.events import EventLog
 
@@ -111,3 +117,31 @@ def test_a_fake_clock_only_moves_when_told() -> None:
     assert clock.now() == T0 + timedelta(seconds=5)
     with pytest.raises(ValueError):
         clock.advance(timedelta(seconds=-1))
+
+
+def terms(price: int) -> Terms:
+    return TERMS.model_copy(update={"base_price": Pence(price)})
+
+
+def test_a_buyer_can_only_raise_their_offer(log: EventLog) -> None:
+    clock = FakeClock(T0)
+    started(log, clock)
+    send_card(log, "neg-0001", by=A.BUYER_AGENT, terms=terms(1000), clock=clock, rules=RULES)
+    send_card(log, "neg-0001", by=A.SELLER_AGENT, terms=terms(1400), clock=clock, rules=RULES)
+    before = log.saved("neg-0001")
+    with pytest.raises(BackwardsConcession):
+        send_card(log, "neg-0001", by=A.BUYER_AGENT, terms=terms(999), clock=clock, rules=RULES)
+    assert log.saved("neg-0001") == before
+    send_card(
+        log, "neg-0001", by=A.BUYER_AGENT, terms=terms(1000), clock=clock, rules=RULES
+    )  # same is fine
+
+
+def test_a_seller_can_only_lower_their_counter(log: EventLog) -> None:
+    clock = FakeClock(T0)
+    started(log, clock)
+    send_card(log, "neg-0001", by=A.BUYER_AGENT, terms=terms(1000), clock=clock, rules=RULES)
+    send_card(log, "neg-0001", by=A.SELLER_AGENT, terms=terms(1400), clock=clock, rules=RULES)
+    send_card(log, "neg-0001", by=A.BUYER_AGENT, terms=terms(1100), clock=clock, rules=RULES)
+    with pytest.raises(BackwardsConcession):
+        send_card(log, "neg-0001", by=A.SELLER_AGENT, terms=terms(1401), clock=clock, rules=RULES)
