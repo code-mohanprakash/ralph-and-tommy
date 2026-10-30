@@ -82,3 +82,35 @@ def test_no_field_on_the_card_can_hold_free_text() -> None:
     assert strings, "expected some text fields to check"
     for field in strings:
         assert {"pattern", "enum", "format"} & field.keys(), field
+
+
+@pytest.mark.parametrize(
+    ("role", "code"),
+    [("seller", "repeat_buyer"), ("seller", "quality_concern"), ("buyer", "ageing_stock")],
+)
+def test_a_reason_code_must_belong_to_the_side_using_it(role: str, code: str) -> None:
+    with pytest.raises(ValidationError):
+        OfferCard.model_validate(a_card(from_role=role, reason_codes=[code], prepaid=False))
+
+
+def test_a_seller_can_give_seller_reasons() -> None:
+    card = OfferCard.model_validate(
+        a_card(from_role="seller", reason_codes=["ageing_stock", "limited_qty"], prepaid=False)
+    )
+    assert card.reason_codes == (ReasonCode.AGEING_STOCK, ReasonCode.LIMITED_QTY)
+
+
+def test_the_same_reason_twice_is_refused() -> None:
+    with pytest.raises(ValidationError):
+        OfferCard.model_validate(a_card(reason_codes=["bulk", "bulk"]))
+
+
+def test_at_most_three_reasons() -> None:
+    codes = ["prepaid", "bulk", "deadline", "repeat_buyer"]
+    with pytest.raises(ValidationError):
+        OfferCard.model_validate(a_card(reason_codes=codes))
+
+
+def test_prepaid_as_a_reason_needs_a_prepaid_offer() -> None:
+    with pytest.raises(ValidationError):
+        OfferCard.model_validate(a_card(reason_codes=["prepaid"], prepaid=False))
