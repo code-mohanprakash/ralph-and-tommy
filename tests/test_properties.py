@@ -9,6 +9,7 @@ from hypothesis import strategies as st
 from sqlalchemy.orm import Session
 
 from fleek_agents.config import BandThresholds
+from fleek_agents.domain.bands import Band
 from fleek_agents.domain.fees import buyer_pays, seller_receives
 from fleek_agents.domain.money import Pence
 from fleek_agents.domain.offers import OfferCard
@@ -17,7 +18,7 @@ from fleek_agents.domain.state import Actor, Move, NegotiationState
 from fleek_agents.store.db import Base, make_engine
 from fleek_agents.store.deals import AcceptOutcome, accept, put_on_sale, stock_left
 from fleek_agents.store.events import EventLog
-from fleek_agents.vault.bands import Band, buyer_band, seller_band
+from fleek_agents.vault.bands import buyer_band, seller_band
 from fleek_agents.vault.checks import can_accept, deal_possible
 from fleek_agents.vault.mandate import BuyerMandate, SellerMandate
 from fleek_agents.vault.secret import SecretMoney

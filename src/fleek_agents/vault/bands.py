@@ -4,19 +4,11 @@ The agent needs to know when it's near its limit. Four coarse bands tell it that
 more, and (in a later PR) it gets one check per round, so it can't zero in on the number.
 """
 
-from enum import StrEnum
-
 from fleek_agents.config import BandThresholds
+from fleek_agents.domain.bands import Band
 from fleek_agents.domain.fees import buyer_pays, seller_receives
 from fleek_agents.domain.money import Pence
 from fleek_agents.vault.mandate import BuyerMandate, SellerMandate
-
-
-class Band(StrEnum):
-    STRONG = "strong"
-    ACCEPTABLE = "acceptable"
-    STRETCH = "stretch"  # still inside the limit
-    OUTSIDE = "outside"  # past the limit: the vault will refuse it
 
 
 def band_of(part: Pence, whole: Pence, t: BandThresholds) -> Band:

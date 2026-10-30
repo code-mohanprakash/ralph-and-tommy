@@ -72,3 +72,13 @@ class OfferCard(DomainModel):
         if ReasonCode.PREPAID in self.reason_codes and not self.prepaid:
             raise ValueError("'prepaid' is only a reason if the offer is prepaid")
         return self
+
+
+class Terms(DomainModel):
+    """What an agent decides. Everything else on the card is filled in by the harness."""
+
+    base_price: PenceField
+    bundles: Annotated[StrictInt, Field(gt=0)]
+    prepaid: StrictBool
+    ship_by: date
+    reason_codes: tuple[ReasonCode, ...] = ()
