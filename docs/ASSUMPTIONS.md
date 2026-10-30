@@ -39,20 +39,22 @@ They keep buyers active today over WhatsApp, email, calls and stock lists.
 
 ## Fleek facts we build on
 
-From Fleek's public website and help centre, read on 28 Oct 2026. They may have changed since.
+From Fleek's public help centre, read on 28 Oct and checked again on 30 Oct 2026. They may change.
 
 | Fact | What the design does with it |
 |---|---|
 | **Make an Offer:** the buyer bids; the seller accepts, counters or declines within 48 hours, or the offer expires. | The agents use the same moves and the same 48-hour clock, not a new protocol. |
 | **Only the base price is negotiable.** Shipping is fixed and already included in the listed price. | Agents negotiate the base price. The buyer's limit is checked against the full delivered cost. |
-| **Two main listing types:** Exact (the lot you see is the lot you get, one of one) and Representative (a pool of stock with 2–4 quantity tiers). | An Exact lot can only be sold once: the first accepted offer wins, the lot is locked, and other buyers are told it's sold. |
+| **Listing types:** Exact (the items match the listing exactly), Representative (items can vary slightly from it) and Custom Handpick (made after a video call). | Matching treats both main types the same. Custom Handpick is out of scope. |
+| **From a sample, not a Fleek rule:** in 44 live listings checked on 28 Oct, most had only one available. | A lot with one available can only be sold once: the first accepted offer wins, the lot is locked, and other buyers are told it's sold. |
 | **Grades** are A, B and C. | Grade is a hard filter in matching, before any price talk. |
-| **Fees:** 15% commission on the seller's base price. Buyers pay a 2% protection fee, capped at £20. | Both sides' limits are checked after fees (see assumption 11). |
+| **Fees:** 15% commission on the seller's base price (20–25% for a few categories, such as rework). Buyers pay a 2% protection fee on the order total, capped at £20. | Both sides' limits are checked after fees (see assumption 11). |
 | **Strict anti-disintermediation policy:** sharing contact details can lead to a ban. | Agents exchange a fixed offer form, never free text, so contact details can't be passed. |
 
 Sources: Fleek help centre articles on
 [Make an Offer](https://support.joinfleek.com/hc/en-us/articles/42547229080475),
-[listing types and grades](https://support.joinfleek.com/hc/en-us/articles/42547096235803),
+[listing types](https://support.joinfleek.com/hc/en-us/articles/42543042225307),
+[grades](https://support.joinfleek.com/hc/en-us/articles/42547096235803),
 [seller fees](https://support.joinfleek.com/hc/en-us/articles/42546479618331),
 [buyer protection fee](https://support.joinfleek.com/hc/en-us/articles/43308599609243),
 [off-platform trading](https://support.joinfleek.com/hc/en-us/articles/42540435572763).
