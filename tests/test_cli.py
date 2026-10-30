@@ -106,3 +106,14 @@ def test_a_deal_waits_then_a_person_approves_it(tmp_path: Path) -> None:
     done = runner.invoke(app, ["approve", "neg-0001", "--db", db])
     assert done.exit_code == 0 and "approved and closed" in done.output
     assert "Nothing waiting" in runner.invoke(app, ["approvals", "--db", db]).output
+
+
+def test_the_call_list_comes_from_the_deals_file(tmp_path: Path) -> None:
+    db = str(tmp_path / "fleek.db")
+    assert "No near misses" in runner.invoke(app, ["digest", "--db", db]).output
+    for buyer in ("buyer-0020", "buyer-0037"):
+        runner.invoke(
+            app, ["negotiate", "--mock", "--buyer", buyer, "--matcher", "words", "--db", db]
+        )
+    listed = runner.invoke(app, ["digest", "--db", db], env={"COLUMNS": "200"})
+    assert "buyer-0020" in listed.output and "walked_away" in listed.output

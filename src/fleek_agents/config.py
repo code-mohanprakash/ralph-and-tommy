@@ -83,6 +83,15 @@ class ApprovalRules(BaseModel):
     first_deals_by_person: Annotated[StrictInt, Field(ge=0)] = 3
 
 
+class DigestRules(BaseModel):
+    """What makes a failed negotiation worth an account manager's call."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    near_miss_gap_pct: Annotated[StrictInt, Field(gt=0, le=100)] = 10
+    list_size: Annotated[StrictInt, Field(gt=0)] = 20
+
+
 class Settings(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -91,6 +100,7 @@ class Settings(BaseModel):
     models: ModelRouting = ModelRouting()
     spending: Spending = Spending()
     approval: ApprovalRules = ApprovalRules()
+    digest: DigestRules = DigestRules()
 
 
 def load_settings(path: Path = Path("market.toml")) -> Settings:
