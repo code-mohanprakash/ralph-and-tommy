@@ -348,3 +348,28 @@ def simulate(
     table = Table(*line)
     table.add_row(*line.values())
     Console().print(table)
+
+
+@app.command()
+def export(
+    out: Annotated[str, typer.Option(help="Where to write the run, e.g. viewer/runs/run.json.")],
+    db: Annotated[str, typer.Option(help="The deals file.")] = "fleek.db",
+    title: Annotated[str, typer.Option(help="A name for the run.")] = "A run",
+    seed: Annotated[int, typer.Option(help="Which seeded market.")] = 2026,
+) -> None:
+    """Write every negotiation in the deals file to a JSON run the Deal Room can play."""
+    from pathlib import Path
+
+    from fleek_agents.store.pairings import PairingRow
+    from fleek_agents.trace.export import export_run
+
+    session, lots = _session(db, seed)
+    ids = [
+        r.negotiation_id
+        for r in session.query(PairingRow).order_by(PairingRow.id)
+        if r.negotiation_id
+    ]
+    trace = export_run(EventLog(session), ids, lots, title=title)
+    Path(out).parent.mkdir(parents=True, exist_ok=True)
+    Path(out).write_text(trace.model_dump_json(indent=2), encoding="utf-8")
+    Console().print(f"Wrote {len(ids)} negotiation(s) to {out}.")

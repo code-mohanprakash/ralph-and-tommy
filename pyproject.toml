@@ -65,3 +65,9 @@ name = "The domain stays pure: no database, no vault"
 type = "forbidden"
 source_modules = ["fleek_agents.domain"]
 forbidden_modules = ["fleek_agents.store", "fleek_agents.vault"]
+
+[[tool.importlinter.contracts]]
+name = "Run traces never import the vault, so an exported file can't carry a secret"
+type = "forbidden"
+source_modules = ["fleek_agents.trace"]
+forbidden_modules = ["fleek_agents.vault"]
