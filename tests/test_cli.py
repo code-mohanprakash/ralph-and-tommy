@@ -1,3 +1,4 @@
+import json
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -131,3 +132,17 @@ def test_the_no_channel_check_fails_for_the_right_reason(monkeypatch: pytest.Mon
     )
     monkeypatch.setattr(report, "OfferCard", loose)
     assert report.text_channel_check() == "OPEN: a card accepted a free-text message"
+
+
+def test_a_run_exports_to_json(tmp_path: Path) -> None:
+    db, out = str(tmp_path / "fleek.db"), tmp_path / "runs" / "run.json"
+    runner.invoke(
+        app, ["negotiate", "--mock", "--buyer", "buyer-0002", "--matcher", "words", "--db", db]
+    )
+    result = runner.invoke(app, ["export", "--db", db, "--out", str(out), "--title", "demo"])
+    assert result.exit_code == 0 and "Wrote 1 negotiation" in result.output
+    data = json.loads(out.read_text())
+    assert (
+        data["format"] == "ralph-and-tommy/run/1"
+        and data["negotiations"][0]["buyer_id"] == "buyer-0002"
+    )
