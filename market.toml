@@ -5,3 +5,9 @@
 # At or under strong_pct: strong. At or under acceptable_pct: acceptable. Up to 100: stretch.
 strong_pct = 85
 acceptable_pct = 95
+
+[negotiation]
+# Offers plus counter-offers in one negotiation. After the last, a side can only accept or walk away.
+max_rounds = 6
+# Fleek's Make an Offer: 48 hours to answer, or the offer expires.
+answer_hours = 48

@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from fleek_agents.config import BandThresholds, load_settings
+from fleek_agents.config import BandThresholds, NegotiationRules, load_settings
 
 
 def test_the_thresholds_come_from_market_toml() -> None:
@@ -16,3 +16,8 @@ def test_a_settings_file_with_bad_bands_is_refused(tmp_path: Path) -> None:
     bad.write_text("[bands]\nstrong_pct = 99\nacceptable_pct = 90\n")
     with pytest.raises(ValidationError):
         load_settings(bad)
+
+
+def test_the_negotiation_rules_come_from_market_toml() -> None:
+    settings = load_settings(Path(__file__).parents[1] / "market.toml")
+    assert settings.negotiation == NegotiationRules(max_rounds=6, answer_hours=48)

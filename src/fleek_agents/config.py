@@ -26,10 +26,20 @@ class BandThresholds(BaseModel):
         return self
 
 
+class NegotiationRules(BaseModel):
+    """Fleek's Make an Offer rules: 48 hours to answer; our cap on rounds."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    max_rounds: Annotated[StrictInt, Field(ge=1, le=20)] = 6  # offers + counters in one negotiation
+    answer_hours: Annotated[StrictInt, Field(ge=1)] = 48
+
+
 class Settings(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     bands: BandThresholds = BandThresholds()
+    negotiation: NegotiationRules = NegotiationRules()
 
 
 def load_settings(path: Path = Path("market.toml")) -> Settings:
