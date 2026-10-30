@@ -369,6 +369,37 @@ def simulate(
 
 
 @app.command()
+def room(
+    port: Annotated[int, typer.Option(help="Which port on this computer.")] = 8765,
+    open_browser: Annotated[
+        bool, typer.Option("--open/--no-open", help="Open the page in your browser.")
+    ] = True,
+) -> None:
+    """The Deal Room: one negotiation, run by the real code, shown step by step in a browser."""
+    import webbrowser
+
+    from fleek_agents.room.server import Room, make_server
+
+    console = Console()
+    settings = _settings()
+    try:
+        server = make_server(Room(settings, lambda: (ScriptedRalph(), ScriptedTommy())), port)
+    except OSError:
+        console.print(f"Port {port} is busy. Try another: fleek room --port {port + 1}")
+        raise typer.Exit(code=2) from None
+    url = f"http://127.0.0.1:{server.server_address[1]}/"
+    console.print(f"The Deal Room is open at {url}  (Ctrl+C to stop)")
+    if open_browser:
+        webbrowser.open(url)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        console.print("Stopped.")
+    finally:
+        server.server_close()
+
+
+@app.command()
 def export(
     out: Annotated[str, typer.Option(help="Where to write the run, e.g. viewer/runs/run.json.")],
     db: Annotated[str, typer.Option(help="The deals file.")] = "fleek.db",

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deal Room</title>
+<style>
+:root{--bg:#F5F4F0;--card:#FFFFFF;--text:#1F1E1D;--muted:#5F5E5A;--line:rgba(0,0,0,.12);--ok:#3B6D11;--bad:#A32D2D}
+@media (prefers-color-scheme:dark){:root{--bg:#1F1E1D;--card:#2A2927;--text:#F1EFE8;--muted:#B4B2A9;--line:rgba(255,255,255,.14);--ok:#97C459;--bad:#F09595}}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:760px;margin:0 auto;padding:16px}
+label{display:block;font-size:14px;color:var(--muted);margin:8px 0 2px}
+input{font:inherit;width:120px;padding:4px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--text)}
+button{font:inherit;font-size:14px;padding:6px 14px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--text);cursor:pointer}
+.step{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin:8px 0}
+.detail{font:12px/1.5 ui-monospace,Menlo,monospace;color:var(--muted);margin-top:4px}
+.err{color:var(--bad);font-size:14px;min-height:20px}
+</style>
+</head>
+<body>
+<main>
+<h1 style="font-size:22px;font-weight:500">Deal Room</h1>
+<p style="color:var(--muted)">Set the two secret limits, then run. Every step below comes from the real code.</p>
+<label for="max">Shop's max, a pair delivered (secret) £</label><input id="max" value="15.50" inputmode="decimal">
+<label for="floor">Karachi's floor, a pair after Fleek's fee (secret) £</label><input id="floor" value="9.35" inputmode="decimal">
+<label for="pairs">Pairs wanted</label><input id="pairs" value="200" inputmode="numeric">
+<label><input id="regular" type="checkbox" style="width:auto"> The shop has closed deals before</label>
+<p><button id="run">Run the negotiation</button></p>
+<div id="err" class="err"></div>
+<div id="steps"></div>
+<div id="decide" style="display:none"><button id="approve">Approve</button> <button id="reject">Reject</button></div>
+<div id="decided"></div>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const pence = text => Math.round(parseFloat(text) * 100);
+async function post(path, body) {
+  const r = await fetch(path, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error);
+  return data;
+}
+function show(story) {
+  $("steps").innerHTML = "";
+  story.steps.forEach((s, i) => {
+    const d = document.createElement("div"); d.className = "step";
+    const say = document.createElement("div"); say.textContent = (i + 1) + ". " + s.say;
+    const detail = document.createElement("div"); detail.className = "detail"; detail.textContent = s.detail;
+    d.append(say, detail); $("steps").append(d);
+  });
+  $("decide").style.display = story.outcome.state === "pending_approval" ? "block" : "none";
+  $("decided").textContent = "";
+}
+$("run").onclick = async () => {
+  $("err").textContent = "";
+  const body = {buyer_max: pence($("max").value), seller_floor: pence($("floor").value),
+                pairs: parseInt($("pairs").value, 10), regular_buyer: $("regular").checked};
+  if (!(body.buyer_max > 0) || !(body.seller_floor > 0)) { $("err").textContent = "Enter both limits, for example 15.50 and 9.35."; return; }
+  try { show(await post("/api/run", body)); } catch (e) { $("err").textContent = e.message; }
+};
+for (const d of ["approve", "reject"]) $(d).onclick = async () => {
+  try { const r = await post("/api/decide", {decision: d}); $("decide").style.display = "none"; $("decided").textContent = r.say; }
+  catch (e) { $("err").textContent = e.message; }
+};
+</script>
+</body>
+</html>
