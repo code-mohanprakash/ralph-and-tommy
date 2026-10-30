@@ -236,8 +236,9 @@ def approvals(
     seed: Annotated[int, typer.Option(help="Which seeded market.")] = 2026,
 ) -> None:
     """Deals waiting for a person, and why."""
+    rules = _settings().approval  # before opening the deals file, so a wrong folder makes no file
     session, lots = _session(db, seed)
-    waiting = pending(EventLog(session), lots, _settings().approval)
+    waiting = pending(EventLog(session), lots, rules)
     console = Console()
     if not waiting:
         console.print("Nothing waiting for approval.")
@@ -278,8 +279,9 @@ def digest(
     """The account managers' call list: failed negotiations that came close, biggest first."""
     from fleek_agents.humans.digest import call_list
 
+    rules = _settings().digest  # before opening the deals file, so a wrong folder makes no file
     session, lots = _session(db, seed)
-    items = call_list(EventLog(session), lots, _settings().digest)
+    items = call_list(EventLog(session), lots, rules)
     console = Console()
     if not items:
         console.print("No near misses to call about.")

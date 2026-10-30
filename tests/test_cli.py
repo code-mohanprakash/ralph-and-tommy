@@ -174,5 +174,7 @@ def test_without_market_toml_a_command_says_where_to_run_it(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.chdir(tmp_path)
-    result = runner.invoke(app, ["approvals"])
-    assert result.exit_code == 2 and "No market.toml here" in result.output
+    for command in ("approvals", "digest"):
+        result = runner.invoke(app, [command])
+        assert result.exit_code == 2 and "No market.toml here" in result.output
+    assert list(tmp_path.iterdir()) == []  # and it left no empty deals file behind
