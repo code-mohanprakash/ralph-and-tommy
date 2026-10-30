@@ -10,7 +10,7 @@ import json
 from datetime import timedelta
 from typing import Annotated, ClassVar, Self
 
-from pydantic import Field, StrictBool, StrictInt, model_validator
+from pydantic import BaseModel, Field, StrictBool, StrictInt, model_validator
 
 from fleek_agents.agents.base import Accept, Action, Send, View, WalkAway
 from fleek_agents.domain.bands import Band
@@ -146,7 +146,7 @@ def tools_for(view: View) -> list[Tool]:
     ]
 
 
-def to_action(name: str, parsed: DomainModel, view: View) -> Action:
+def to_action(name: str, parsed: BaseModel, view: View) -> Action:
     """Turn the agent's chosen tool into the harness's action, filling in what the harness owns."""
     if isinstance(parsed, _Offer):
         terms = Terms(
