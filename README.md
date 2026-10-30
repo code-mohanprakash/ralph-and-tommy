@@ -25,6 +25,17 @@ make check
 `make check` runs ruff (lint and format), mypy (strict types), pytest, and the API key scan. CI runs
 the same `make check` on every pull request.
 
+## Try it
+
+```bash
+uv run fleek negotiate --mock --buyer buyer-0001
+```
+
+One buyer from the seeded market: matching (filters, then "could any price work?", then
+similarity), then scripted Ralph and Tommy negotiate the best match under every rule, and you see
+what each side would pay and receive. No AI and no API key yet. The first run downloads a 64 MB
+local embedding model; add `--matcher words` to skip it.
+
 ## Your API key
 
 Copy `.env.example` to `.env` and paste your Anthropic key after `ANTHROPIC_API_KEY=`. Git ignores
