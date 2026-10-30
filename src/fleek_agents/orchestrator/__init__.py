@@ -1,1 +1,1 @@
-"""Running negotiations: the clock, rounds, and (later) many deals at once."""
+"""Running negotiations: opening them, rounds and the clock, approval, and several at once."""
