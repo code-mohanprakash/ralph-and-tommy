@@ -1,0 +1,7 @@
+# Numbers we expect to tune. Each is checked when it's loaded.
+
+[bands]
+# How close a price is to a side's own limit, as a % of that limit.
+# At or under strong_pct: strong. At or under acceptable_pct: acceptable. Up to 100: stretch.
+strong_pct = 85
+acceptable_pct = 95
