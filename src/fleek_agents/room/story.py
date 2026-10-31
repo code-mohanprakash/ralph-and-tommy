@@ -365,6 +365,10 @@ def story(run: RoomRun) -> dict[str, Any]:
         "sellers": sellers,
         "steps": [asdict(s) for s in steps],
         "outcome": outcome,
+        # The account manager's summary, when a person is needed. Built without the vault.
+        "handover": None
+        if run.handover is None
+        else asdict(run.handover) | {"at_stake": run.handover.at_stake.value},
         # The secret limits, for the audience only. The page hides them unless asked.
         "audience": {
             "buyer_max": run.room.buyer_max.value,

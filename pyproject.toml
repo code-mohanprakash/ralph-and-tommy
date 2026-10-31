@@ -71,3 +71,9 @@ name = "Run traces never import the vault, so an exported file can't carry a sec
 type = "forbidden"
 source_modules = ["fleek_agents.trace"]
 forbidden_modules = ["fleek_agents.vault"]
+
+[[tool.importlinter.contracts]]
+name = "What account managers read never imports the vault, so it can't show a secret limit"
+type = "forbidden"
+source_modules = ["fleek_agents.humans"]
+forbidden_modules = ["fleek_agents.vault"]

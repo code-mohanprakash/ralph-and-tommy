@@ -303,6 +303,39 @@ def digest(
     console.print(table)
 
 
+@app.command()
+def summary(
+    negotiation: Annotated[str, typer.Argument(help="e.g. neg-0001")],
+    db: Annotated[str, typer.Option(help="The deals file.")] = "fleek.db",
+    seed: Annotated[int, typer.Option(help="Which seeded market.")] = 2026,
+) -> None:
+    """The account manager's summary: what happened, where it stands, and what to do."""
+    from fleek_agents.humans.handover import handover
+    from fleek_agents.store.pairings import PairingRow
+
+    settings = _settings()  # before opening the deals file, so a wrong folder makes no file
+    session, lots = _session(db, seed)
+    console = Console()
+    if session.query(PairingRow).filter_by(negotiation_id=negotiation).first() is None:
+        console.print(f"No negotiation called {negotiation} in {db}.")
+        raise typer.Exit(code=2)
+    h = handover(
+        EventLog(session), negotiation, lots, approval=settings.approval, digest=settings.digest
+    )
+    if h is None:
+        console.print(
+            f"{negotiation}: no person needed. It ended {EventLog(session).state(negotiation)}."
+        )
+        return
+    console.print(f"[bold]{negotiation}[/bold] · {h.buyer_id} · {h.lot_title}")
+    console.print(f"Why you're seeing this: {h.why}")
+    console.print("What happened:")
+    for n, line in enumerate(h.happened, 1):
+        console.print(f"  {n}. {line}")
+    console.print(f"Where it stands: {h.stands}")
+    console.print(f"What to do: {h.todo}")
+
+
 class Agents(StrEnum):
     scripted = "scripted"
     haiku = "claude-haiku-5-5"

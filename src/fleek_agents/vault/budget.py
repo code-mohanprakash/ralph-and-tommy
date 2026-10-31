@@ -8,22 +8,15 @@ deal stays within budget, so no combination of sellers accepting can take them p
 
 from collections.abc import Callable, Mapping
 
-from fleek_agents.domain.fees import buyer_pays
+from fleek_agents.domain.fees import order_total
 from fleek_agents.domain.models import Lot
 from fleek_agents.domain.money import Pence
-from fleek_agents.domain.offers import OfferCard
 from fleek_agents.domain.state import NegotiationState
 from fleek_agents.store.events import EventLog
 from fleek_agents.store.pairings import lot_of, negotiations_of
 from fleek_agents.vault.mandate import BuyerMandate
 
 AGREED = {NegotiationState.PENDING_APPROVAL, NegotiationState.CLOSED}
-
-
-def order_total(card: OfferCard, lot: Lot) -> Pence:
-    return buyer_pays(
-        base_price=card.base_price, shipping=lot.shipping, pieces=card.bundles * lot.pieces
-    ).total
 
 
 def committed(

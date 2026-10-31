@@ -413,7 +413,7 @@
     $("say").textContent = st.say;
     $("detail").textContent = st.detail;
     $("detail").hidden = !$("eng").checked;
-    $("decide").hidden = !(s.waiting && i === story.steps.length - 1);
+    showHandover(i === story.steps.length - 1 && !s.decided ? story.handover : null, s.waiting);
 
     const cl = cardsLine(s.cards);
     li($("ralphKnows"), s.ralph.concat(cl ? [cl] : []).concat(s.ralph.length ? [] : ["nothing yet"]));
@@ -460,6 +460,18 @@
     $("next").disabled = i >= story.steps.length - 1;
     return s;
   }
+  const TAG = { approve: "Approval needed", stopped: "An agent was stopped", near_miss: "Near miss: worth a call" };
+  function showHandover(h, waiting) {
+    $("am").hidden = !h;
+    if (!h) return;
+    $("amTag").textContent = TAG[h.kind];
+    $("amTag").className = "tag " + h.kind;
+    $("amWhy").textContent = h.why;
+    li($("amHappened"), h.happened);
+    $("amStands").textContent = h.stands;
+    $("amTodo").textContent = h.todo;
+    $("decide").hidden = !(h.kind === "approve" && waiting);
+  }
   function checkText(c) {
     const city = CITY[c.seller_id] || "";
     switch (c.kind) {
@@ -505,7 +517,7 @@
         const to = st.kind === "card" ? shopper(st.target) : st.actor === "ralph" ? s.matched : "ralph";
         await sendCard(who, to, money(st.price || 0) + " a pair", st.kind === "card");
         if (gone()) return;
-        if (st.kind === "blocked") say("vault", "Stopped. A person takes over.");
+        if (st.kind === "blocked") say("vault", "Stopped. Handed to an account manager.");
         break;
       }
       case "accept": {
@@ -517,7 +529,10 @@
         lamp("gold");
         break;
       }
-      case "walk": await think(shopper(st.actor), "I'm walking away", 1400); break;
+      case "walk":
+        await think(shopper(st.actor), "I'm walking away", 1400);
+        if (story.handover && i === story.steps.length - 1) say("vault", "On the account managers' call list");
+        break;
       case "waiting": lamp("gold"); say("vault", "Waiting for a person at Fleek"); break;
       case "approved": case "decided":
         if (st.ok !== false && s.matched) await driveTruck(s.matched);

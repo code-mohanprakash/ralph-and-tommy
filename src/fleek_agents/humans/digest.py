@@ -9,12 +9,12 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 from fleek_agents.config import DigestRules
+from fleek_agents.domain.fees import order_total
 from fleek_agents.domain.models import Lot
 from fleek_agents.domain.money import Pence
 from fleek_agents.domain.state import NegotiationState
 from fleek_agents.store.events import EventLog
 from fleek_agents.store.pairings import PairingRow
-from fleek_agents.vault.budget import order_total
 
 NO_DEAL = {
     NegotiationState.WALKED_AWAY,
