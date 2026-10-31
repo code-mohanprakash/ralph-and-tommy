@@ -22,7 +22,16 @@ from fleek_agents.orchestrator.clock import FakeClock
 from fleek_agents.orchestrator.opening import open_negotiation
 from fleek_agents.orchestrator.run import run_negotiation
 from fleek_agents.room.play import START, run_room
-from fleek_agents.room.scenario import DELHI, KARACHI, LAHORE, RoomInput, room_market, room_secrets
+from fleek_agents.humans.digest import call_list
+from fleek_agents.room.scenario import (
+    DELHI,
+    KARACHI,
+    LAHORE,
+    SCENARIOS,
+    RoomInput,
+    room_market,
+    room_secrets,
+)
 from fleek_agents.room.server import BadRequest, Room, make_server, read_input
 from fleek_agents.room.story import story
 from fleek_agents.store.db import Base, make_engine
@@ -173,6 +182,51 @@ def test_watching_the_agents_changes_nothing_they_do(settings: Settings) -> None
     assert watched[: len(plain)] == plain  # the room adds only the approval step after
 
 
+SCENARIO = {x.key: x for x in SCENARIOS}
+
+
+@pytest.mark.parametrize(
+    ("key", "state", "last_step"),
+    [
+        ("deal", "pending_approval", "waiting"),
+        ("small", "closed", "approved"),
+        ("broken", "needs_human", "blocked"),
+        ("near_miss", "walked_away", "walk"),
+        ("no_match", "no_match", "no_match"),
+    ],
+)
+def test_each_scenario_ends_the_way_its_button_says(
+    settings: Settings, key: str, state: str, last_step: str
+) -> None:
+    s = play(SCENARIO[key].room, settings)
+    assert s["outcome"]["state"] == state
+    assert s["steps"][-1]["kind"] == last_step
+
+
+def test_the_near_miss_had_a_price_and_lands_on_the_call_list(settings: Settings) -> None:
+    run = run_room(
+        SCENARIO["near_miss"].room, ralph=ScriptedRalph(), tommy=ScriptedTommy(), settings=settings
+    )
+    lowest, highest = run.limits.seller_lowest, run.limits.buyer_highest
+    assert lowest is not None and highest is not None and lowest <= highest  # a deal was possible
+    items = call_list(run.log, {x.id: x for x in run.market.lots}, settings.digest)
+    assert [i.negotiation_id for i in items] == [run.negotiation_id]
+    assert items[0].gap_pct <= settings.digest.near_miss_gap_pct
+
+
+def test_the_broken_tommy_changes_only_his_second_counter(settings: Settings) -> None:
+    def moves(s: dict[str, Any]) -> list[tuple[str, int]]:
+        return [(st["kind"], st["price"]) for st in s["steps"] if st["kind"] in ("card", "blocked")]
+
+    honest, broken = play(DEFAULT, settings), play(SCENARIO["broken"].room, settings)
+    assert moves(broken)[:3] == moves(honest)[:3]  # offer, counter, offer: the same
+    assert moves(broken)[3] == ("blocked", 560)  # half of Ralph's £11.20, and never sent
+    assert len(moves(broken)) == 4
+    blocked = broken["steps"][-1]
+    assert blocked["say"].startswith("This Tommy is broken on purpose")
+    assert "card_outside_limit" in blocked["detail"]
+
+
 def test_bad_input_is_refused() -> None:
     with pytest.raises(ValueError, match="multiple of 50"):
         RoomInput(Pence(1550), Pence(935), pairs=75)
@@ -253,6 +307,16 @@ def test_reject_puts_the_deal_back(server: str) -> None:
     call(server + "/api/run", {"buyer_max": 1550, "seller_floor": 935})
     status, answer = call(server + "/api/decide", {"decision": "reject"})
     assert status == 200 and answer["state"] == "rejected_by_human"
+
+
+def test_the_server_lists_the_scenarios_with_their_inputs(server: str) -> None:
+    status, answer = call(server + "/api/scenarios")
+    assert status == 200
+    assert [x["key"] for x in answer["scenarios"]] == [x.key for x in SCENARIOS]
+    broken = next(x for x in answer["scenarios"] if x["key"] == "broken")
+    status, s = call(server + "/api/run", broken["input"])
+    assert status == 200 and s["outcome"]["state"] == "needs_human"
+    assert s["input"]["tommy_breaks_a_rule"] is True
 
 
 def test_the_server_answers_bad_requests_with_a_reason(server: str) -> None:

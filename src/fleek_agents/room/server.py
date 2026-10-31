@@ -2,6 +2,7 @@
 
 GET  /              the page
 GET  /static/NAME   the page's own files (scripts, styles), from this package
+GET  /api/scenarios the ready-made scenarios, for the buttons
 POST /api/run       run one negotiation with the limits given; answers with the story as JSON
 POST /api/decide    approve or reject the last run's deal, as the account manager
 
@@ -24,7 +25,7 @@ from fleek_agents.domain.money import Pence
 from fleek_agents.domain.state import NegotiationState
 from fleek_agents.orchestrator.approval import approve, reject
 from fleek_agents.room.play import RoomRun, run_room
-from fleek_agents.room.scenario import RoomInput
+from fleek_agents.room.scenario import SCENARIOS, RoomInput
 from fleek_agents.room.story import story
 
 STATIC = Path(__file__).parent / "static"
@@ -50,9 +51,28 @@ def read_input(body: dict[str, Any]) -> RoomInput:
             seller_floor=Pence(int(body["seller_floor"])),
             pairs=int(body.get("pairs", 200)),
             regular_buyer=bool(body.get("regular_buyer", False)),
+            tommy_breaks_a_rule=bool(body.get("tommy_breaks_a_rule", False)),
         )
     except (KeyError, TypeError, ValueError) as error:
         raise BadRequest(f"Can't run with that: {error}") from None
+
+
+def scenarios() -> list[dict[str, Any]]:
+    return [
+        {
+            "key": x.key,
+            "label": x.label,
+            "shows": x.shows,
+            "input": {
+                "buyer_max": x.room.buyer_max.value,
+                "seller_floor": x.room.seller_floor.value,
+                "pairs": x.room.pairs,
+                "regular_buyer": x.room.regular_buyer,
+                "tommy_breaks_a_rule": x.room.tommy_breaks_a_rule,
+            },
+        }
+        for x in SCENARIOS
+    ]
 
 
 class Room:
@@ -108,6 +128,9 @@ def make_handler(room: Room) -> type[BaseHTTPRequestHandler]:
 
         def do_GET(self) -> None:
             path = self.path.split("?")[0]
+            if path == "/api/scenarios":
+                self._json(HTTPStatus.OK, {"scenarios": scenarios()})
+                return
             name = "index.html" if path == "/" else path.removeprefix("/static/")
             file = STATIC / Path(name).name  # .name: no way out of the folder
             if (path == "/" or path.startswith("/static/")) and file.is_file():

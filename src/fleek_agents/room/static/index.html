@@ -69,15 +69,20 @@
   </section>
 
   <section class="setup">
-    <h3>Set the secrets and run again</h3>
+    <h3>Try a scenario</h3>
+    <div id="scenarios" class="scenarios"></div>
+    <h3>Or set the secrets yourself</h3>
     <div class="fields">
-      <label>Shop's max, a pair delivered <span class="lockword">secret</span>
-        <span class="field">£<input id="max" value="15.50" inputmode="decimal"></span></label>
-      <label>Karachi's floor, a pair after Fleek's 15% <span class="lockword">secret</span>
-        <span class="field">£<input id="floor" value="9.35" inputmode="decimal"></span></label>
-      <label>Pairs the shop wants
+      <label for="max">The shop's max, a pair delivered <span class="lockword">secret</span>
+        <span class="slider"><input type="range" id="max" min="1000" max="2000" step="5" value="1550"><output id="maxOut" for="max"></output></span></label>
+      <label for="floor">Karachi's floor, a pair after Fleek's 15% <span class="lockword">secret</span>
+        <span class="slider"><input type="range" id="floor" min="600" max="1400" step="5" value="935"><output id="floorOut" for="floor"></output></span></label>
+      <label for="pairs">Pairs the shop wants
         <select id="pairs"><option>50</option><option>100</option><option>150</option><option selected>200</option><option>250</option><option>300</option></select></label>
-      <label class="check"><input type="checkbox" id="regular"> The shop has closed deals before</label>
+      <div class="checks">
+        <label class="check"><input type="checkbox" id="regular"> The shop has closed deals before</label>
+        <label class="check"><input type="checkbox" id="broken"> Tommy breaks a rule (for the demo)</label>
+      </div>
     </div>
     <button id="run" class="primary">Run the negotiation</button>
     <p id="err" class="err" role="alert"></p>

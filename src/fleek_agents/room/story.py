@@ -6,7 +6,7 @@ agents got back, and the vault's yes/no answers. The secret limits go in a separ
 block, which the page shows only when the person running the demo chooses to.
 """
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from typing import Any
 
 from fleek_agents.agents.base import Accept, HandOff, Send, WalkAway
@@ -281,7 +281,12 @@ def story(run: RoomRun) -> dict[str, Any]:
         on_table: int | None = None
         last: dict[str, int | None] = {"ralph": None, "tommy": None}
         for turn in run.turns:
-            steps.append(_turn_step(turn, on_table, last[turn.who]))
+            step = _turn_step(turn, on_table, last[turn.who])
+            if step.kind == "blocked" and turn.who == "tommy" and run.room.tommy_breaks_a_rule:
+                step = replace(
+                    step, say="This Tommy is broken on purpose, for the demo. " + step.say
+                )
+            steps.append(step)
             for e in turn.events:
                 if e.card is not None:
                     on_table = last[turn.who] = e.card.base_price.value
@@ -342,8 +347,15 @@ def story(run: RoomRun) -> dict[str, Any]:
                 "chosen": lot is not None and c.lot.id == lot.id,
             }
         )
+    room = run.room
     return {
         "negotiation_id": run.negotiation_id,
+        # What was run, so the page's controls can show it (a scenario button sets them all).
+        "input": {
+            "pairs": room.pairs,
+            "regular_buyer": room.regular_buyer,
+            "tommy_breaks_a_rule": room.tommy_breaks_a_rule,
+        },
         "buyer": {
             "name": run.market.buyers[0].name,
             "wants": run.market.wants[0].text,

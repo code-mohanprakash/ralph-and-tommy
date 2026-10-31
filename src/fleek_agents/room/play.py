@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
-from fleek_agents.agents.base import Action, Agent, View
+from fleek_agents.agents.base import Action, Agent, Send, View
 from fleek_agents.config import Settings
 from fleek_agents.domain.bands import Band
 from fleek_agents.domain.events import Event
@@ -105,6 +105,27 @@ class _Watched:
         return self.action
 
 
+class BreaksARule:
+    """A Tommy broken on purpose: his second counter is half of Ralph's last offer.
+
+    The slip a model can make under pressure. In the recorded probing-bot run, Claude Tommy did
+    try to counter below his floor (`fleek safety`). Tommy doesn't know his floor, so he can't
+    aim below it; half of Ralph's offer is far enough down to show the vault refusing.
+    """
+
+    def __init__(self, inner: Agent) -> None:
+        self._inner, self._counters = inner, 0
+
+    def decide(self, view: View) -> Action:
+        action = self._inner.decide(view)
+        if isinstance(action, Send) and view.on_table is not None:
+            self._counters += 1
+            if self._counters == 2:
+                half = Pence(view.on_table.base_price.value // 2 // 5 * 5)
+                return Send(terms=action.terms.model_copy(update={"base_price": half}))
+        return action
+
+
 def card_limits(
     buyer: BuyerMandate, seller: SellerMandate, lot: Lot, *, list_price: Pence, pieces: int
 ) -> CardLimits:
@@ -163,6 +184,8 @@ def run_room(room: RoomInput, *, ralph: Agent, tommy: Agent, settings: Settings)
     nid = run.negotiation_id = open_negotiation(
         log, buyer_id=want.buyer_id, lot_id=lot.id, clock=clock, rules=settings.negotiation
     )
+    if room.tommy_breaks_a_rule:
+        tommy = BreaksARule(tommy)
     watched = {"ralph": _Watched(ralph), "tommy": _Watched(tommy)}
     deal = Deal(
         nid,
