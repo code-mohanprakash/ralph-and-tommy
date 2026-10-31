@@ -8,6 +8,27 @@ Fleek's GTM Engineer role.
 - **The AI decides what to offer. Code decides what's allowed. The secret limits never go into the
   AI.**
 
+## See it: the Deal Room
+
+```bash
+uv sync
+uv run fleek room
+```
+
+Your browser opens a 3D scene: a Brick Lane vintage shop and its agent Ralph, the Fleek vault,
+and three warehouses with their agents (Tommy). You set two secret limits (the shop's max and
+the warehouse's floor) and step through one negotiation with Back and Next. The real code makes
+every move; the scene only acts it out. Panels show what Ralph, the vault and Tommy know at each
+step, and when a person is needed the account manager gets a summary with Approve and Reject.
+
+- **Five scenario buttons:** a deal a person approves, a small deal the rule approves, Tommy
+  breaking a rule, a near miss, and no price that can work.
+- **Show the secrets** reveals the limits to the audience only. **Engineer view** shows the code
+  and events behind each step.
+- **`--agents claude-haiku-5-5`** makes Ralph and Tommy Claude, replayed from recordings in the
+  repo (no key needed). Add `--live` to ask Claude now with any numbers.
+- Everything loads from your computer, so it works without wifi.
+
 ## Try it: three commands
 
 You need [uv](https://docs.astral.sh/uv/) (it installs Python 3.12 and everything else). No API
@@ -35,6 +56,7 @@ uv run fleek simulate --agents claude-haiku-5-5 --buyers 30   # replays a record
 uv run fleek negotiate --mock --buyer buyer-0002 --db fleek.db  # keep the deal in a file...
 uv run fleek approvals --db fleek.db                            # ...see what waits for a person
 uv run fleek digest --db fleek.db                               # the account managers' call list
+uv run fleek summary neg-0001 --db fleek.db                     # what happened, and what to do
 ```
 
 To run Claude live, put an Anthropic key in `.env` (copy `.env.example`) and add `--live` to

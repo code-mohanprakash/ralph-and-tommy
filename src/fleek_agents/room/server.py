@@ -12,18 +12,18 @@ the demo works without wifi.
 
 import json
 import threading
-from collections.abc import Callable
 from datetime import UTC, datetime
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
-from fleek_agents.agents.base import Agent
 from fleek_agents.config import Settings
 from fleek_agents.domain.money import Pence
 from fleek_agents.domain.state import NegotiationState
+from fleek_agents.llm.replay import CassetteMiss
 from fleek_agents.orchestrator.approval import approve, reject
+from fleek_agents.room.agents import AgentPair, NoRecording
 from fleek_agents.room.play import RoomRun, run_room
 from fleek_agents.room.scenario import SCENARIOS, RoomInput
 from fleek_agents.room.story import story
@@ -36,8 +36,6 @@ TYPES = {
     ".json": "application/json",
 }
 MAX_BODY = 10_000
-
-AgentPair = Callable[[], tuple[Agent, Agent]]  # fresh Ralph and Tommy for each run
 
 
 class BadRequest(ValueError):
@@ -55,6 +53,9 @@ def read_input(body: dict[str, Any]) -> RoomInput:
         )
     except (KeyError, TypeError, ValueError) as error:
         raise BadRequest(f"Can't run with that: {error}") from None
+
+
+SCRIPTED = "Scripted agents: plain rules, no AI"
 
 
 def scenarios() -> list[dict[str, Any]]:
@@ -78,17 +79,26 @@ def scenarios() -> list[dict[str, Any]]:
 class Room:
     """What the server keeps between requests: the settings, the agents, and the last run."""
 
-    def __init__(self, settings: Settings, agents: AgentPair) -> None:
-        self.settings, self.agents = settings, agents
+    def __init__(
+        self, settings: Settings, agents: AgentPair, label: str = SCRIPTED, scripted: bool = True
+    ) -> None:
+        self.settings, self.agents, self.label, self.scripted = settings, agents, label, scripted
         self.last: RoomRun | None = None
         self._lock = threading.Lock()  # one run at a time; the page is for one person
 
     def run(self, body: dict[str, Any]) -> dict[str, Any]:
         room = read_input(body)
         with self._lock:
-            ralph, tommy = self.agents()
-            self.last = run_room(room, ralph=ralph, tommy=tommy, settings=self.settings)
-            return story(self.last)
+            try:
+                ralph, tommy = self.agents(room)
+                self.last = run_room(room, ralph=ralph, tommy=tommy, settings=self.settings)
+            except NoRecording as error:
+                raise BadRequest(str(error)) from None
+            except CassetteMiss:  # the recording ran out: Claude's answers no longer match it
+                raise BadRequest(
+                    "The recording doesn't cover this run. Restart with --live to ask Claude now."
+                ) from None
+            return story(self.last) | {"agents": self.label}
 
     def decide(self, body: dict[str, Any]) -> dict[str, Any]:
         decision = body.get("decision")
@@ -129,7 +139,10 @@ def make_handler(room: Room) -> type[BaseHTTPRequestHandler]:
         def do_GET(self) -> None:
             path = self.path.split("?")[0]
             if path == "/api/scenarios":
-                self._json(HTTPStatus.OK, {"scenarios": scenarios()})
+                self._json(
+                    HTTPStatus.OK,
+                    {"scenarios": scenarios(), "agents": room.label, "scripted": room.scripted},
+                )
                 return
             name = "index.html" if path == "/" else path.removeprefix("/static/")
             file = STATIC / Path(name).name  # .name: no way out of the folder

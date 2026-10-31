@@ -407,16 +407,45 @@ def room(
     open_browser: Annotated[
         bool, typer.Option("--open/--no-open", help="Open the page in your browser.")
     ] = True,
+    agents: Annotated[
+        Agents, typer.Option(help="Who negotiates. Claude replays a recording unless --live.")
+    ] = Agents.scripted,
+    live: Annotated[
+        bool, typer.Option("--live", help="Ask Claude now, any numbers (needs the key).")
+    ] = False,
+    record: Annotated[
+        bool, typer.Option("--record", help="Record Claude on every scenario, then stop.")
+    ] = False,
 ) -> None:
     """The Deal Room: one negotiation, run by the real code, shown step by step in a browser."""
     import webbrowser
 
+    from fleek_agents.llm.env import load_env_file
+    from fleek_agents.room import agents as who
     from fleek_agents.room.server import Room, make_server
 
     console = Console()
     settings = _settings()
+    model = agents.value
+    name = who.MODEL_NAMES.get(model, model)
+    if agents is Agents.scripted:
+        if live or record:
+            console.print("--live and --record are for Claude: add --agents claude-haiku-5-5.")
+            raise typer.Exit(code=2)
+        desk = Room(settings, who.scripted())
+    elif record:
+        load_env_file()
+        for key, run in who.record(model, settings):
+            console.print(f"{key}: {run.final or 'no match'}")
+        console.print(f"Recorded {name} on every scenario in {who.RECORDINGS}.")
+        return
+    elif live:
+        load_env_file()
+        desk = Room(settings, who.live(model, settings), f"{name}, live", scripted=False)
+    else:
+        desk = Room(settings, who.replayed(model), f"{name}, replayed from a recording", False)
     try:
-        server = make_server(Room(settings, lambda: (ScriptedRalph(), ScriptedTommy())), port)
+        server = make_server(desk, port)
     except OSError:
         console.print(f"Port {port} is busy. Try another: fleek room --port {port + 1}")
         raise typer.Exit(code=2) from None

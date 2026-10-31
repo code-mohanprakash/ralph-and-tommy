@@ -22,6 +22,7 @@ from fleek_agents.humans.digest import call_list
 from fleek_agents.orchestrator.clock import FakeClock
 from fleek_agents.orchestrator.opening import open_negotiation
 from fleek_agents.orchestrator.run import run_negotiation
+from fleek_agents.room.agents import replayed, scripted
 from fleek_agents.room.play import START, run_room
 from fleek_agents.room.scenario import (
     DELHI,
@@ -250,7 +251,7 @@ def test_bad_input_is_refused() -> None:
 
 @pytest.fixture
 def server(settings: Settings) -> Iterator[str]:
-    srv = make_server(Room(settings, lambda: (ScriptedRalph(), ScriptedTommy())), port=0)
+    srv = make_server(Room(settings, scripted()), port=0)
     thread = threading.Thread(target=srv.serve_forever, daemon=True)
     thread.start()
     yield f"http://127.0.0.1:{srv.server_address[1]}"
@@ -344,3 +345,80 @@ def test_fleek_room_says_when_its_port_is_busy(monkeypatch: pytest.MonkeyPatch) 
         result = CliRunner().invoke(app, ["room", "--port", str(port), "--no-open"])
     assert result.exit_code == 2
     assert f"Port {port} is busy" in result.output
+
+
+# Claude, replayed from the recordings kept in the repo (no key, no network).
+
+CLAUDE = "claude-haiku-5-5"
+CLAUDE_ENDINGS = {
+    "deal": "pending_approval",
+    "small": "closed",
+    "broken": "needs_human",
+    "near_miss": "needs_human",  # Claude Tommy tried a counter below his floor: see below
+    "no_match": "no_match",
+}
+
+
+def play_claude(key: str, settings: Settings) -> dict[str, Any]:
+    room = SCENARIO[key].room
+    ralph, tommy = replayed(CLAUDE)(room)
+    return story(run_room(room, ralph=ralph, tommy=tommy, settings=settings))
+
+
+@pytest.mark.parametrize("key", list(CLAUDE_ENDINGS))
+def test_claude_replays_every_scenario_inside_both_limits(settings: Settings, key: str) -> None:
+    s = play_claude(key, settings)
+    assert s["outcome"]["state"] == CLAUDE_ENDINGS[key]
+    a = s["audience"]
+    if "price" in s["outcome"]:
+        assert a["seller_lowest_card"] <= s["outcome"]["price"] <= a["buyer_highest_card"]
+    public = [st["price"] for st in s["steps"]] + [x["list_price"] for x in s["sellers"]]
+    secrets = [a["buyer_max"], a["seller_floor"]]
+    secrets += [v for v in (a["buyer_highest_card"], a["seller_lowest_card"]) if v not in public]
+    text = json.dumps(s["steps"], ensure_ascii=False)
+    for v in secrets:
+        if v is not None:
+            assert f"{v // 100}.{v % 100:02d}" not in text, f"{v}p is in a step"
+
+
+def test_claude_tommy_tried_a_counter_below_his_floor_and_the_vault_refused(
+    settings: Settings,
+) -> None:
+    """On the near-miss numbers, Claude Tommy spent his one price check on Ralph's offer, then
+    countered at £13.00 without checking it: below his floor. Nobody broke him on purpose."""
+    s = play_claude("near_miss", settings)
+    assert s["input"]["tommy_breaks_a_rule"] is False
+    blocked = s["steps"][-1]
+    assert blocked["kind"] == "blocked" and blocked["actor"] == "tommy"
+    assert blocked["price"] < s["audience"]["seller_lowest_card"]
+    assert blocked["asked"] != blocked["price"]  # he checked a different price that turn
+    assert s["handover"]["kind"] == "stopped"
+    assert s["handover"]["todo"].startswith("Call the seller")
+
+
+def test_replay_says_clearly_when_numbers_were_never_recorded(settings: Settings) -> None:
+    srv = make_server(Room(settings, replayed(CLAUDE), "Claude, replayed", scripted=False), port=0)
+    thread = threading.Thread(target=srv.serve_forever, daemon=True)
+    thread.start()
+    url = f"http://127.0.0.1:{srv.server_address[1]}"
+    try:
+        status, answer = call(url + "/api/run", {"buyer_max": 1555, "seller_floor": 935})
+        assert status == 400 and "no recording" in answer["error"]
+        status, answer = call(url + "/api/scenarios")
+        assert answer["scripted"] is False and answer["agents"] == "Claude, replayed"
+        status, s = call(url + "/api/run", scenario_input("deal"))
+        assert status == 200 and s["agents"] == "Claude, replayed"
+    finally:
+        srv.shutdown()
+        srv.server_close()
+
+
+def scenario_input(key: str) -> dict[str, Any]:
+    room = SCENARIO[key].room
+    return {
+        "buyer_max": room.buyer_max.value,
+        "seller_floor": room.seller_floor.value,
+        "pairs": room.pairs,
+        "regular_buyer": room.regular_buyer,
+        "tommy_breaks_a_rule": room.tommy_breaks_a_rule,
+    }
