@@ -18,11 +18,11 @@ from fleek_agents.agents.scripted import ScriptedRalph, ScriptedTommy
 from fleek_agents.cli import app
 from fleek_agents.config import Settings, load_settings
 from fleek_agents.domain.money import Pence
+from fleek_agents.humans.digest import call_list
 from fleek_agents.orchestrator.clock import FakeClock
 from fleek_agents.orchestrator.opening import open_negotiation
 from fleek_agents.orchestrator.run import run_negotiation
 from fleek_agents.room.play import START, run_room
-from fleek_agents.humans.digest import call_list
 from fleek_agents.room.scenario import (
     DELHI,
     KARACHI,
