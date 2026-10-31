@@ -1,6 +1,7 @@
 """The Deal Room: a real negotiation, told as steps, served on this computer only."""
 
 import json
+import re
 import socket
 import threading
 import urllib.error
@@ -218,6 +219,25 @@ def test_the_server_serves_the_page_and_nothing_outside_its_folder(server: str) 
     assert status == 404
     status, _ = call(server + "/elsewhere")
     assert status == 404
+
+
+def test_the_page_loads_everything_from_this_computer(server: str) -> None:
+    """No CDN, no fonts from the web: the demo has to work without wifi."""
+    status, page = call(server + "/")
+    assert status == 200
+    for asset in re.findall(r'(?:src|href)="([^"]+)"', page):
+        assert asset.startswith("/static/"), asset
+        with urllib.request.urlopen(server + asset, timeout=10) as response:
+            assert response.status == 200
+            kind = response.headers["Content-Type"]
+        assert kind.startswith({"js": "text/javascript", "css": "text/css"}[asset.split(".")[-1]])
+    script = (ROOT / "src/fleek_agents/room/static/room.js").read_text(encoding="utf-8")
+    assert not re.search(r"https?://", script)
+
+
+def test_three_js_keeps_its_licence_header() -> None:
+    head = (ROOT / "src/fleek_agents/room/static/three.min.js").read_text(encoding="utf-8")[:120]
+    assert "Three.js Authors" in head and "MIT" in head
 
 
 def test_run_then_approve_closes_the_deal_across_requests(server: str) -> None:
