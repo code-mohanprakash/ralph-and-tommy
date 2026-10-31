@@ -611,7 +611,9 @@
   }
   async function loadScenarios() {
     const r = await fetch("/api/scenarios");
-    const { scenarios } = await r.json();
+    const { scenarios, agents, scripted } = await r.json();
+    $("agents").textContent = "Negotiating: " + agents;
+    $("claudeNote").hidden = scripted;
     for (const x of scenarios) {
       const b = document.createElement("button");
       b.dataset.key = x.key;

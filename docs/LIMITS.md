@@ -26,6 +26,10 @@ recordings).
 | Refusals, repeated bad output and the spend cap go to a person, with the reason | [`tests/test_escalation.py`](../tests/test_escalation.py), [`tests/test_budget.py`](../tests/test_budget.py) |
 | Every line `fleek negotiate` prints passes the leak scanner | [`tests/test_cli.py`](../tests/test_cli.py), [`tests/test_scanner.py`](../tests/test_scanner.py) |
 | An exported run holds no amount at or near a secret limit (floor, max or budget), as a number or inside text | [`tests/test_export.py`](../tests/test_export.py), with planted secrets the check must find |
+| The Deal Room's steps hold no secret limit; the limits are only in a separate audience block the page shows on request | [`tests/test_room.py`](../tests/test_room.py) (`test_the_steps_never_hold_a_secret_limit`, and for every Claude replay), with planted secrets the check must find |
+| What account managers read can't show a secret limit | A fourth import-linter contract: `humans` never imports the vault; [`tests/test_handover.py`](../tests/test_handover.py) |
+| A person is told what happened and what to do whenever one is needed | [`tests/test_handover.py`](../tests/test_handover.py) (approval, a stopped agent on either side, near miss) |
+| The Deal Room loads nothing from the internet | `test_the_page_loads_everything_from_this_computer` in [`tests/test_room.py`](../tests/test_room.py) |
 | Editing `market.toml` changes what the commands do | [`tests/test_cli.py`](../tests/test_cli.py), [`tests/test_config.py`](../tests/test_config.py) |
 | Fees match an independent calculation to the penny | [`tests/test_properties.py`](../tests/test_properties.py) |
 | The results in EVALS.md come from the recordings in the repo | [`tests/test_sim.py`](../tests/test_sim.py) replays both Claude runs and checks the same results |
@@ -54,6 +58,9 @@ recordings).
 
 **About safety**
 
+- **The Deal Room's market is three warehouses, fixed for the demo.** Its scenario labels say
+  how the scripted agents end each one; Claude's endings are its own (on the near-miss numbers,
+  Claude Tommy tried a counter below his floor instead).
 - **The attacks are the ones I thought of.** One recorded run each, on one model. A red team would
   find others. `fleek safety` says so on its last line.
 - **Untrusted text still reaches the model.** Listing titles go to Claude Ralph, and the

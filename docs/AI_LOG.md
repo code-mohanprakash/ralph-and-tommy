@@ -32,7 +32,7 @@ calls no model.
 
 ## Where it helped
 
-- **Speed.** About 65 PRs and 951 tests between Thursday 29 Oct at night and Friday 30 Oct.
+- **Speed.** About 73 PRs and 1,004 tests between Thursday 29 Oct at night and Saturday 31 Oct.
   I couldn't have built this much alone in the time.
 - **Tests I wouldn't have written by hand.** Property tests (2,000 random cases that the band words
   and the yes/no checks agree), race tests with 10 threads, and "break it on purpose" checks:
@@ -99,6 +99,9 @@ production-ready, secure, guaranteed, unhackable, proves, fully autonomous.
 - The export's secret check skipped prices written inside text and the buyer's budget. Fixed in
   [#66](https://github.com/code-mohanprakash/ralph-and-tommy/pull/66).
 - The `fleek safety` cells above (#65).
+- The Deal Room's "no secret in a step" test searched `json.dumps` output for "£15.50", but
+  `json.dumps` writes "£" as `\u00a3`, so it could never match. Found by planting a secret before
+  merging (#69); the test now reads the text as written and also looks for the bare amount.
 
 Each new test was broken on purpose first and seen to fail, then restored and seen to pass.
 
@@ -111,11 +114,15 @@ Each new test was broken on purpose first and seen to fail, then restored and se
   5.1% below list; 70% vs 83% of negotiations) in the 30-buyer run ([EVALS.md](EVALS.md)).
 - **Sonnet 5.5 cost about 13 times as much per deal as Haiku 5.5 and did no better** on the same 10
   buyers.
+- **Claude Tommy broke a limit on his own in the Deal Room.** On the near-miss numbers, he spent
+  his one price check on Ralph's offer, then countered at £13.00 without checking it: 6p under
+  the lowest price his floor allows. The vault refused, the card was never sent, and the account manager got a summary
+  saying to call the seller. The scripted agents ended the same numbers as a near miss.
 
 ## What the AI cost
 
-The live model calls kept as recordings in this repo cost **87 US cents** at list prices, over 766
-calls (84.7¢ of it the two simulation runs). Recordings that were thrown away and re-made aren't
+The live model calls kept as recordings in this repo cost **about 90 US cents** at list prices,
+over 846 calls (84.7¢ of it the two simulation runs, 2.3¢ the Deal Room's Claude recordings). Recordings that were thrown away and re-made aren't
 counted, so the true total is a little higher. Everything in CI and the README replays the
 recordings, so running the repo costs nothing.
 

@@ -12,6 +12,7 @@
     <div>
       <h1>Deal Room</h1>
       <p class="muted">One negotiation, run by the real code. The scene only acts it out.</p>
+      <p id="agents" class="agents"></p>
     </div>
     <div class="toggles">
       <label><input type="checkbox" id="peek"> Show the secrets</label>
@@ -80,6 +81,7 @@
   <section class="setup">
     <h3>Try a scenario</h3>
     <div id="scenarios" class="scenarios"></div>
+    <p id="claudeNote" class="muted small" hidden>With Claude, each scenario's ending is Claude's own. The labels say how the scripted agents end it.</p>
     <h3>Or set the secrets yourself</h3>
     <div class="fields">
       <label for="max">The shop's max, a pair delivered <span class="lockword">secret</span>

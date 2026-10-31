@@ -26,7 +26,8 @@ flowchart LR
     store[("store (SQLite)<br/>events, append-only<br/>snapshots, stock, pairings")]
     people["humans<br/>approvals queue<br/>near-miss call list"]
     safety["safety<br/>naive baseline, attacks,<br/>leak scanner"]
-    trace["trace<br/>run export → Deal Room"]
+    trace["trace<br/>run export as JSON"]
+    room["room<br/>the Deal Room: one run,<br/>told step by step in 3D"]
 
     market --> matching
     vault -- "deal_possible: yes/no" --> matching
@@ -38,9 +39,10 @@ flowchart LR
     orchestrator --> store
     store --> people
     store --> trace
+    orchestrator --> room
 ```
 
-The arrows out of the vault carry **only band words or True/False**. Three import rules, checked
+The arrows out of the vault carry **only band words or True/False**. Four import rules, checked
 in CI by import-linter, make the boundary structural rather than a convention:
 
 | Rule | Why |
@@ -48,6 +50,7 @@ in CI by import-linter, make the boundary structural rather than a convention:
 | `agents` and `llm` never import `vault`, directly or indirectly | Code that talks to the model can't hold a secret |
 | `domain` never imports `store` or `vault` | The core types stay plain data and rules |
 | `trace` never imports `vault` | An exported run file can't carry a secret |
+| `humans` never imports `vault` | What account managers read can't show a secret limit |
 
 ## Who knows what
 
@@ -56,7 +59,7 @@ in CI by import-linter, make the boundary structural rather than a convention:
 | **Ralph** (buyer's agent) | the lot's public facts, the buyer's request, every card, cards left, his other open deals, a band word for one price per round | the buyer's max or budget, the seller's floor |
 | **Tommy** (seller's agent) | the lot's public facts, every card, cards left, a band word for one price per round | the seller's floor, anything about the buyer's limits |
 | **The harness** | everything: it asks the vault yes/no questions before any card or accept | — |
-| **Account managers** | deals waiting for approval and why; near misses (prices both sides saw) | the secret limits |
+| **Account managers** | a summary whenever they're needed: why, every move, where it stands, what to do (approvals, stopped agents, near misses) | the secret limits |
 
 Agents talk to each other only through **offer cards**: price, bundles, prepaid, ship-by date and
 up to three fixed reason codes. A card has no text field, so an instruction can't travel from one
@@ -100,10 +103,11 @@ the log rebuilds each negotiation exactly; the saved state is checked against a 
 | `harness` | The tool loop, strict schemas, the agents' tools, escalation to a person |
 | `llm` | The Claude client, model routing, spend caps, record and replay |
 | `agents` | The `Agent` interface, scripted Ralph and Tommy, Claude Ralph and Tommy, picking 3 lots |
-| `humans` | The account managers' near-miss call list |
+| `humans` | What account managers read: the near-miss call list, and the summary written whenever a person is needed |
 | `safety` | The naive baseline, attacks, the leak detector and scanner, the safety report |
 | `evals` | The market simulation |
 | `trace` | Exporting a run as JSON |
+| `room` | The Deal Room: a small fixed market, one negotiation through the real code, told as steps; a local web server and the 3D page |
 | `config.py` + `market.toml` | Every number we expect to tune |
 
 ## Choices worth knowing

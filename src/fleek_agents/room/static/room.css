@@ -29,6 +29,7 @@ button.primary { border-color: var(--text); font-weight: 500; }
 :focus-visible { outline: 2px solid var(--ralph); outline-offset: 2px; }
 
 .top { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; justify-content: space-between; margin-bottom: 8px; }
+.agents { font-size: 13px; font-weight: 500; margin-top: 2px !important; }
 .toggles { display: flex; gap: 16px; font-size: 14px; color: var(--muted); }
 .toggles label { display: flex; gap: 6px; align-items: center; cursor: pointer; }
 
