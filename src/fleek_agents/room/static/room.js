@@ -571,13 +571,44 @@
     return data;
   }
   function readSetup() {
-    const pence = (v) => Math.round(parseFloat(v) * 100);
-    const body = {
-      buyer_max: pence($("max").value), seller_floor: pence($("floor").value),
+    return {
+      buyer_max: parseInt($("max").value, 10), seller_floor: parseInt($("floor").value, 10),
       pairs: parseInt($("pairs").value, 10), regular_buyer: $("regular").checked,
+      tommy_breaks_a_rule: $("broken").checked,
     };
-    if (!(body.buyer_max > 0) || !(body.seller_floor > 0)) throw new Error("Enter both secret limits in pounds, for example 15.50 and 9.35.");
-    return body;
+  }
+  function showSetup(input) {
+    $("max").value = input.buyer_max;
+    $("floor").value = input.seller_floor;
+    $("pairs").value = String(input.pairs);
+    $("regular").checked = input.regular_buyer;
+    $("broken").checked = input.tommy_breaks_a_rule;
+    readouts();
+  }
+  function readouts() {
+    $("maxOut").textContent = money(parseInt($("max").value, 10));
+    $("floorOut").textContent = money(parseInt($("floor").value, 10));
+  }
+  ["max", "floor"].forEach((id) => $(id).addEventListener("input", () => { readouts(); markScenario(null); }));
+  ["pairs", "regular", "broken"].forEach((id) => $(id).addEventListener("change", () => markScenario(null)));
+  function markScenario(key) {
+    document.querySelectorAll(".scenarios button").forEach((b) => b.classList.toggle("on", b.dataset.key === key));
+  }
+  async function loadScenarios() {
+    const r = await fetch("/api/scenarios");
+    const { scenarios } = await r.json();
+    for (const x of scenarios) {
+      const b = document.createElement("button");
+      b.dataset.key = x.key;
+      const t = document.createElement("b");
+      t.textContent = x.label;
+      const d = document.createElement("span");
+      d.textContent = x.shows;
+      b.append(t, d);
+      b.onclick = () => { showSetup(x.input); markScenario(x.key); start(x.input).then(() => $("scene").scrollIntoView({ behavior: calm ? "auto" : "smooth" })); };
+      $("scenarios").appendChild(b);
+    }
+    markScenario("deal");
   }
   async function start(body) {
     $("err").textContent = "";
@@ -590,10 +621,7 @@
       $("err").textContent = e.message;
     }
   }
-  $("run").onclick = () => {
-    try { start(readSetup()); } catch (e) { $("err").textContent = e.message; }
-  };
-  ["max", "floor"].forEach((id) => $(id).addEventListener("input", () => ($("err").textContent = "")));
+  $("run").onclick = () => start(readSetup()).then(() => $("scene").scrollIntoView({ behavior: calm ? "auto" : "smooth" }));
 
   async function decide(decision) {
     try {
@@ -608,5 +636,7 @@
   $("approve").onclick = () => decide("approve");
   $("reject").onclick = () => decide("reject");
 
+  readouts();
+  loadScenarios();
   start(readSetup());
 })();

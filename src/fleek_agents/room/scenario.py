@@ -51,6 +51,7 @@ class RoomInput:
     seller_floor: Pence  # the least Karachi takes per pair, after Fleek's commission
     pairs: int = 200  # how many pairs the shop wants
     regular_buyer: bool = False  # True: the shop has closed deals before, so the rule may approve
+    tommy_breaks_a_rule: bool = False  # a Tommy broken on purpose, to show the vault stopping him
 
     def __post_init__(self) -> None:
         if not 1 <= self.buyer_max.value <= 10_000 or not 1 <= self.seller_floor.value <= 10_000:
@@ -127,3 +128,46 @@ def room_secrets(market: Market, room: RoomInput) -> Secrets:
             for lot in market.lots
         },
     )
+
+
+@dataclass(frozen=True)
+class Scenario:
+    key: str
+    label: str  # the button
+    shows: str  # one line: what it demonstrates
+    room: RoomInput
+
+
+# Each one is checked in tests/test_room.py to end the way its label says.
+SCENARIOS = (
+    Scenario(
+        "deal",
+        "A deal a person approves",
+        "200 pairs, a new shop: £1,500 or more waits for a person",
+        RoomInput(buyer_max=Pence(1550), seller_floor=Pence(935)),
+    ),
+    Scenario(
+        "small",
+        "A small deal the rule approves",
+        "50 pairs for a shop with deals behind it",
+        RoomInput(buyer_max=Pence(1550), seller_floor=Pence(935), pairs=50, regular_buyer=True),
+    ),
+    Scenario(
+        "broken",
+        "Tommy breaks a rule",
+        "Tommy tries to sell below his floor; the vault stops it",
+        RoomInput(buyer_max=Pence(1550), seller_floor=Pence(935), tommy_breaks_a_rule=True),
+    ),
+    Scenario(
+        "near_miss",
+        "A near miss",
+        "A price existed, but they ran out of cards 2% apart",
+        RoomInput(buyer_max=Pence(1620), seller_floor=Pence(1110)),
+    ),
+    Scenario(
+        "no_match",
+        "No price can work",
+        "The shop's max is below the floor: never matched",
+        RoomInput(buyer_max=Pence(1300), seller_floor=Pence(1100)),
+    ),
+)

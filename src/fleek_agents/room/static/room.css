@@ -76,6 +76,15 @@ button.primary { border-color: var(--text); font-weight: 500; }
 .field { display: flex; align-items: center; gap: 4px; color: var(--text); }
 .field input, .fields select { width: 110px; padding: 4px 8px; border: 1px solid var(--strong); border-radius: var(--radius); background: var(--card); }
 .lockword { align-self: flex-start; font-size: 11px; color: var(--warn); background: var(--warn-bg); border-radius: 4px; padding: 0 6px; margin-left: 4px; }
+.scenarios { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; margin: 8px 0 18px; }
+.scenarios button { text-align: left; padding: 8px 12px; }
+.scenarios button.on { border-color: var(--text); background: var(--soft); }
+.scenarios b { display: block; font-weight: 500; }
+.scenarios span { display: block; font-size: 12px; color: var(--muted); line-height: 1.4; }
+.slider { display: flex; align-items: center; gap: 10px; color: var(--text); }
+.slider input { flex: 1; }
+.slider output { min-width: 64px; font-weight: 500; text-align: right; }
+.checks { display: flex; flex-direction: column; gap: 4px; justify-content: center; }
 .err { color: var(--bad); font-size: 14px; min-height: 22px; margin-top: 6px; }
 
 @media (max-width: 640px) {
