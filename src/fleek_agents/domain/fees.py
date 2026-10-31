@@ -7,8 +7,9 @@ We assume the 2% is on the whole order, shipping included (docs/ASSUMPTIONS.md, 
 Fees are worked out per order, as Fleek charges them, and rounded once each.
 """
 
-from fleek_agents.domain.models import DomainModel, PenceField
+from fleek_agents.domain.models import DomainModel, Lot, PenceField
 from fleek_agents.domain.money import Pence
+from fleek_agents.domain.offers import OfferCard
 
 COMMISSION_PCT = 15
 PROTECTION_FEE_PCT = 2
@@ -44,3 +45,10 @@ def seller_receives(*, base_price: Pence, pieces: int) -> SellerReceives:
     gross = base_price.times(pieces)
     commission = gross.percent(COMMISSION_PCT)
     return SellerReceives(gross=gross, commission=commission, net=gross - commission)
+
+
+def order_total(card: OfferCard, lot: Lot) -> Pence:
+    """What the buyer pays for the order on a card, shipping and protection fee included."""
+    return buyer_pays(
+        base_price=card.base_price, shipping=lot.shipping, pieces=card.bundles * lot.pieces
+    ).total

@@ -19,6 +19,7 @@ from fleek_agents.domain.models import Lot, Market
 from fleek_agents.domain.money import Pence
 from fleek_agents.domain.rules import quote
 from fleek_agents.domain.state import NegotiationState
+from fleek_agents.humans.handover import Handover, handover
 from fleek_agents.matching.embeddings import HashingEmbedder
 from fleek_agents.matching.funnel import bundles_for, possible_deals
 from fleek_agents.matching.ranking import rank
@@ -82,6 +83,7 @@ class RoomRun:
     turns: list[Turn] = field(default_factory=list)
     final: NegotiationState | None = None
     why_waiting: str | None = None  # why a person must approve, when one must
+    handover: Handover | None = None  # the account manager's summary, when a person is needed
     limits: CardLimits = CardLimits(None, None)
 
 
@@ -217,4 +219,5 @@ def run_room(room: RoomInput, *, ralph: Agent, tommy: Agent, settings: Settings)
     run.final = settle(log, nid, lots=lots, rules=rules, at=clock.now())
     waiting = [w for w in pending(log, lots, rules) if w.negotiation_id == nid]
     run.why_waiting = waiting[0].why if waiting else None
+    run.handover = handover(log, nid, lots, approval=rules, digest=settings.digest)
     return run

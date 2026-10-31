@@ -27,11 +27,20 @@
     <div>
       <p id="say"></p>
       <p id="detail" class="detail"></p>
-      <div id="decide" class="decide" hidden>
-        <button id="approve" class="primary">Approve</button>
-        <button id="reject">Reject</button>
-      </div>
     </div>
+  </section>
+
+  <section id="am" class="am" hidden aria-live="polite">
+    <div class="am-head"><span class="am-icon" aria-hidden="true">&#128100;</span><h3>For the account manager</h3><span id="amTag" class="tag"></span></div>
+    <div class="label">Why you're seeing this</div><p id="amWhy"></p>
+    <div class="label">What happened</div><ol id="amHappened"></ol>
+    <div class="label">Where it stands</div><p id="amStands"></p>
+    <div class="label">What to do</div><p id="amTodo"></p>
+    <div id="decide" class="decide" hidden>
+      <button id="approve" class="primary">Approve</button>
+      <button id="reject">Reject</button>
+    </div>
+    <p class="muted small am-note">Written by plain code from the record of moves. No AI wrote it, and it can't show a secret limit: this code isn't allowed to import the vault.</p>
   </section>
 
   <nav class="controls">

@@ -203,6 +203,13 @@ def test_each_scenario_ends_the_way_its_button_says(
     assert s["steps"][-1]["kind"] == last_step
 
 
+def test_the_story_carries_the_account_managers_summary(settings: Settings) -> None:
+    deal, small = play(SCENARIO["deal"].room, settings), play(SCENARIO["small"].room, settings)
+    assert deal["handover"]["kind"] == "approve"
+    assert deal["handover"]["at_stake"] == 304000
+    assert small["handover"] is None
+
+
 def test_the_near_miss_had_a_price_and_lands_on_the_call_list(settings: Settings) -> None:
     run = run_room(
         SCENARIO["near_miss"].room, ralph=ScriptedRalph(), tommy=ScriptedTommy(), settings=settings

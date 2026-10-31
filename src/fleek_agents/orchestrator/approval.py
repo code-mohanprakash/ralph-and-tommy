@@ -10,13 +10,13 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from fleek_agents.config import ApprovalRules
+from fleek_agents.domain.fees import order_total
 from fleek_agents.domain.models import Lot
 from fleek_agents.domain.money import Pence
 from fleek_agents.domain.state import Actor, IllegalMove, Move, NegotiationState
 from fleek_agents.store.deals import give_back_agreed
 from fleek_agents.store.events import EventLog
 from fleek_agents.store.pairings import PairingRow, lot_of, negotiations_of
-from fleek_agents.vault.budget import order_total
 
 
 @dataclass(frozen=True)
