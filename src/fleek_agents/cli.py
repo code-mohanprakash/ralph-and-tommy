@@ -276,13 +276,22 @@ def digest(
     db: Annotated[str, typer.Option(help="The deals file.")] = "fleek.db",
     seed: Annotated[int, typer.Option(help="Which seeded market.")] = 2026,
 ) -> None:
-    """The account managers' call list: failed negotiations that came close, biggest first."""
+    """The account managers' call list (near misses, biggest first) and watch list (flagged)."""
     from fleek_agents.humans.digest import call_list
+    from fleek_agents.humans.monitors import watch_list
 
     rules = _settings().digest  # before opening the deals file, so a wrong folder makes no file
     session, lots = _session(db, seed)
-    items = call_list(EventLog(session), lots, rules)
+    log = EventLog(session)
+    items = call_list(log, lots, rules)
     console = Console()
+    watched = watch_list(log, lots)
+    if watched:
+        table = Table("Negotiation", "Buyer", "Lot", "Why it's on the watch list")
+        for w in watched:
+            table.add_row(w.negotiation_id, w.buyer_id, w.lot_title, w.why)
+        console.print("Watch list: negotiations a monitor flagged.")
+        console.print(table)
     if not items:
         console.print("No near misses to call about.")
         return
@@ -746,6 +755,71 @@ def _leak_through_matching(settings: Settings, privacy: bool, console: Console) 
     )
     console.print(table)
     console.print("Matches lost: real buyers' matches the gate drops, on the seeded market.")
+
+
+@app.command()
+def monitors(
+    live: Annotated[
+        bool, typer.Option("--live", help="Ask Claude now (needs the key; costs money).")
+    ] = False,
+    record: Annotated[
+        bool, typer.Option("--record", help="With --live: keep the calls as the recording.")
+    ] = False,
+) -> None:
+    """The monitors, scored: what each catches, and how often it flags normal traffic."""
+    from fleek_agents.bench import agents as who
+    from fleek_agents.bench.monitoring import (
+        CLEAN_LISTINGS,
+        TEXT_MODELS,
+        attack_listings,
+        behaviour_report,
+        text_report,
+    )
+    from fleek_agents.bench.tactics import run_tactics
+    from fleek_agents.harness.reader import ListingReader
+    from fleek_agents.llm.env import load_env_file
+
+    console = Console()
+    settings = _settings()
+    haiku = Agents.haiku.value
+    controls = run_tactics(
+        settings,
+        lambda t: who.claude_client(haiku, f"tactics_{t}", settings, live=False, record=False),
+        haiku,
+        tactics=("control",),
+    )["control"]
+    table = Table("Monitor", "Catches", "Attacks", "False alarms", "Normal traffic")
+    for row in behaviour_report(settings, controls):
+        table.add_row(
+            row.flag.value,
+            row.caught.as_percent(),
+            row.attack,
+            row.false_alarms.as_percent(),
+            row.normal,
+        )
+    console.print("Behaviour monitors (plain code), on the bench's attackers and normal traffic.")
+    console.print(table)
+
+    if live:
+        load_env_file()
+    attacks = attack_listings(settings)
+
+    def reader_for(model: str) -> ListingReader:
+        client = who.claude_client(model, "textcheck", settings, live=live, record=record)
+        return ListingReader(client, model=model)
+
+    table = Table("Reader model", *[f"Catches: {name}" for name in attacks], "False alarms")
+    for text in text_report(reader_for, TEXT_MODELS, attacks):
+        table.add_row(
+            text.model,
+            *[text.caught[name].as_percent() for name in attacks],
+            text.false_alarms.as_percent(),
+        )
+    sizes = ", ".join(f"{len(v)} {k}" for k, v in attacks.items())
+    console.print(
+        f"The listing reader as a warning: {sizes}, against {len(CLEAN_LISTINGS)} clean listings."
+    )
+    console.print(table)
 
 
 @app.command()
