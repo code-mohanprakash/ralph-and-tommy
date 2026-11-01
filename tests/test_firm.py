@@ -93,3 +93,148 @@ def test_matching_gives_the_same_answer_whatever_the_floor() -> None:
             for f in (floor, floor // 2, floor * 3 // 4)
         }
         assert len(answers) == 1, scenario.key
+
+
+def _run(scenario: Scenario, lot: Lot, limit: SellerMandate) -> list[tuple[object, ...]]:
+    """One scripted negotiation; returns everything the buyer can see, event by event."""
+    from datetime import UTC, datetime
+
+    from sqlalchemy.orm import Session
+
+    from fleek_agents.agents.scripted import ScriptedRalph, ScriptedTommy
+    from fleek_agents.config import Settings
+    from fleek_agents.orchestrator.clock import FakeClock
+    from fleek_agents.orchestrator.opening import open_negotiation
+    from fleek_agents.orchestrator.run import run_negotiation
+    from fleek_agents.store.db import Base, make_engine
+    from fleek_agents.store.deals import put_on_sale
+    from fleek_agents.store.events import EventLog
+
+    settings = Settings()
+    engine = make_engine("sqlite://")
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        log, clock = EventLog(session), FakeClock(datetime(2026, 11, 2, 9, tzinfo=UTC))
+        put_on_sale(session, lot.id, bundles=1)
+        nid = open_negotiation(
+            log,
+            buyer_id=scenario.want.buyer_id,
+            lot_id=lot.id,
+            clock=clock,
+            rules=settings.negotiation,
+        )
+        run_negotiation(
+            log,
+            nid,
+            lot=lot,
+            seller=scenario.seller,
+            want=scenario.want,
+            bundles=1,
+            buyer_limit=scenario.buyer,
+            seller_limit=limit,
+            ralph=ScriptedRalph(),
+            tommy=ScriptedTommy(),
+            clock=clock,
+            settings=settings,
+        )
+        return [(e.move, e.by, e.at, e.to_state, e.card, e.reason) for e in log.read(nid)]
+
+
+def test_a_whole_negotiation_looks_the_same_to_the_buyer_whatever_the_floor() -> None:
+    compared = deals = 0
+    for scenario in generate(60):
+        firm = firm_price_above_both(scenario)
+        if firm < scenario.truth.seller_min.value:
+            continue
+        listed = firm_lot(scenario.lot, firm)
+        floor = scenario.seller_limit.floor_per_piece.reveal().value
+        runs = [
+            _run(scenario, listed, with_floor(scenario.seller_limit, f))
+            for f in (floor, floor // 2, floor * 9 // 10)
+        ]
+        assert runs[0] == runs[1] == runs[2], scenario.key
+        compared += 1
+        deals += any(step[0] == "accept" for step in runs[0])
+    assert compared >= 20 and deals > 0  # the comparison covered deals, not just walk-aways
+
+
+def test_in_haggle_mode_the_floor_does_change_what_the_buyer_sees() -> None:
+    # The control: without firm mode, the same comparison finds differences.
+    differs = 0
+    for scenario in generate(30):
+        floor = scenario.seller_limit.floor_per_piece.reveal().value
+        a = _run(scenario, scenario.lot, scenario.seller_limit)
+        b = _run(scenario, scenario.lot, with_floor(scenario.seller_limit, floor * 9 // 10))
+        differs += a != b
+    assert differs > 0
+
+
+def test_claude_agents_get_byte_identical_requests_whatever_the_floor() -> None:
+    """What reaches the model is all it could ever leak; in firm mode it doesn't move."""
+    import json
+    from datetime import UTC, datetime
+
+    from sqlalchemy.orm import Session
+
+    from fleek_agents.agents.claude import ClaudeAgent
+    from fleek_agents.config import Settings
+    from fleek_agents.orchestrator.clock import FakeClock
+    from fleek_agents.orchestrator.opening import open_negotiation
+    from fleek_agents.orchestrator.run import run_negotiation
+    from fleek_agents.store.db import Base, make_engine
+    from fleek_agents.store.deals import put_on_sale
+    from fleek_agents.store.events import EventLog
+    from tests.fakes import FakeClient, call, message
+
+    scenario = next(  # a lot where the firm price clears the floor and the buyer can pay it
+        s
+        for s in generate(40)
+        if s.truth.seller_min.value <= firm_price_above_both(s) <= s.truth.buyer_max.value
+    )
+    firm = firm_price_above_both(scenario)
+    listed = firm_lot(scenario.lot, firm)
+    offer = {"price_pence": firm, "prepaid": False, "reason_codes": []}
+
+    def requests(floor: int) -> str:
+        ralph_client = FakeClient(
+            message(call("get_lot", {})),
+            message(call("check_price", {"price_pence": firm})),
+            message(call("send_offer", offer)),
+        )
+        tommy_client = FakeClient(
+            message(call("check_price", {"price_pence": firm})), message(call("accept", {}))
+        )
+        settings = Settings()
+        engine = make_engine("sqlite://")
+        Base.metadata.create_all(engine)
+        with Session(engine) as session:
+            log, clock = EventLog(session), FakeClock(datetime(2026, 11, 2, 9, tzinfo=UTC))
+            put_on_sale(session, listed.id, bundles=1)
+            nid = open_negotiation(
+                log,
+                buyer_id=scenario.want.buyer_id,
+                lot_id=listed.id,
+                clock=clock,
+                rules=settings.negotiation,
+            )
+            run_negotiation(
+                log,
+                nid,
+                lot=listed,
+                seller=scenario.seller,
+                want=scenario.want,
+                bundles=1,
+                buyer_limit=scenario.buyer,
+                seller_limit=with_floor(scenario.seller_limit, floor),
+                ralph=ClaudeAgent(ralph_client, model="claude-haiku-5-5", prompt="ralph"),
+                tommy=ClaudeAgent(tommy_client, model="claude-haiku-5-5", prompt="tommy"),
+                clock=clock,
+                settings=settings,
+            )
+            assert log.saved(nid).agreed is not None
+        return json.dumps([ralph_client.requests, tommy_client.requests], default=str)
+
+    floor = scenario.seller_limit.floor_per_piece.reveal().value
+    seen = requests(floor)
+    assert str(firm) in seen  # the firm price is public, so it's there
+    assert requests(floor // 2) == seen

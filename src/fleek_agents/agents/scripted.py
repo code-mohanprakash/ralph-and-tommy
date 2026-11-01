@@ -27,10 +27,20 @@ def _terms(view: View, price: Pence) -> Terms:
 
 
 class ScriptedRalph:
-    """Opens low, moves halfway towards the seller each round, never past his own limit."""
+    """Opens low, moves halfway towards the seller each round, never past his own limit.
+
+    On a firm-price lot there's nothing to haggle: he offers the firm price if it's inside his
+    limit, and walks away if it isn't.
+    """
 
     def decide(self, view: View) -> Action:
-        counter = view.on_table
+        counter, firm = view.on_table, view.lot.firm_price
+        if firm is not None:
+            if counter is not None and view.band(counter.base_price) in INSIDE:
+                return Accept()
+            if counter is None and view.band(firm) in INSIDE:
+                return Send(terms=_terms(view, firm))
+            return WalkAway()
         if counter is None:  # opening offer: the highest of 80/70/60/50% of list inside his limit
             for pct in (80, 70, 60, 50):
                 price = _round5(view.list_price.value * pct // 100)
@@ -64,6 +74,11 @@ class ScriptedTommy:
         if offer is None:
             return WalkAway()  # nothing to answer
         band = view.band(offer.base_price)
+        firm = view.lot.firm_price
+        if firm is not None:  # firm mode: his limit is the public firm price, so no haggling
+            if band in INSIDE:
+                return Accept()
+            return WalkAway() if view.rounds_left <= 0 else Send(terms=_terms(view, firm))
         if band in (Band.STRONG, Band.ACCEPTABLE):
             return Accept()
         if view.rounds_left <= 0:
