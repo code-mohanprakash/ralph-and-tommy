@@ -58,6 +58,9 @@ class Deal:
     tommy: Agent
     within_budget: Callable[[Pence], bool] = lambda _: True
     elsewhere: Callable[[], tuple[str, ...]] = lambda: ()  # the buyer's other open deals
+    # The lot as Ralph sees it. With the listing reader on, its description is the reader's
+    # fixed summary, not the seller's words (harness/reader.py). Tommy and every check use `lot`.
+    buyer_lot: Lot | None = None
 
 
 def _inside_own_limit(
@@ -93,7 +96,7 @@ def take_step(log: EventLog, deal: Deal, *, clock: FakeClock, settings: Settings
     actor = Actor.BUYER_AGENT if buyers_turn else Actor.SELLER_AGENT
     history = tuple(e.card for e in log.read(negotiation_id) if e.card is not None)
     view = View(
-        lot=lot,
+        lot=deal.buyer_lot if buyers_turn and deal.buyer_lot is not None else lot,
         want=deal.want if buyers_turn else None,
         bundles=deal.bundles,
         list_price=q.base_price,
@@ -191,6 +194,7 @@ def run_negotiation(
     clock: FakeClock,
     settings: Settings,
     within_budget: Callable[[Pence], bool] = lambda _: True,
+    buyer_lot: Lot | None = None,
 ) -> NegotiationState:
     deal = Deal(
         negotiation_id,
@@ -203,6 +207,7 @@ def run_negotiation(
         ralph,
         tommy,
         within_budget,
+        buyer_lot=buyer_lot,
     )
     for _ in range(settings.negotiation.max_rounds + 2):
         if not take_step(log, deal, clock=clock, settings=settings):

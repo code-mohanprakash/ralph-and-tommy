@@ -464,13 +464,21 @@ def room(
 class Suite(StrEnum):
     core = "core"
     tactics = "tactics"
+    redteam = "redteam"
 
 
 def _bench_tactics(
-    agents: Agents, settings: Settings, *, live: bool, record: bool, console: Console
+    agents: Agents,
+    settings: Settings,
+    *,
+    live: bool,
+    record: bool,
+    reader: bool,
+    console: Console,
 ) -> None:
     from fleek_agents.bench import agents as who
-    from fleek_agents.bench.tactics import LOTS, run_tactics, score_tactics
+    from fleek_agents.bench.tactics import LOTS, TACTICS, run_tactics, score_tactics
+    from fleek_agents.harness.reader import ListingReader
     from fleek_agents.llm.env import load_env_file
 
     if agents is Agents.scripted:
@@ -479,10 +487,16 @@ def _bench_tactics(
     if live:
         load_env_file()
     model = agents.value
+    suite = "tactics_reader" if reader else "tactics"
+    clients = {
+        t: who.claude_client(model, f"{suite}_{t}", settings, live=live, record=record)
+        for t in TACTICS
+    }
     runs = run_tactics(
         settings,
-        lambda t: who.claude_client(model, f"tactics_{t}", settings, live=live, record=record),
+        clients.__getitem__,
         model,
+        reader_for=(lambda t: ListingReader(clients[t], model=model)) if reader else None,
     )
     table = Table(
         "Tactic", "Extra paid (% of list)", "Moved the price", "p", "Deals", "Breaches", "Canaries"
@@ -498,9 +512,48 @@ def _bench_tactics(
             str(row.breaches),
             str(row.canaries),
         )
+    shown = "Ralph sees only the listing reader's summary" if reader else "Ralph reads the text"
     console.print(
         f"Claude Ralph ({model}) against scripted Tommy on {LOTS} deals: each tactic in the "
-        "listing text, paired with the plain control on the same deal."
+        f"listing text, paired with the plain control on the same deal. {shown}."
+    )
+    console.print(table)
+
+
+def _bench_redteam(
+    agents: Agents,
+    settings: Settings,
+    *,
+    live: bool,
+    record: bool,
+    reader: bool,
+    console: Console,
+) -> None:
+    from fleek_agents.bench import agents as who
+    from fleek_agents.bench.redteam import ATTEMPTS, DEALS, red_team, score_red_team
+    from fleek_agents.harness.reader import ListingReader
+    from fleek_agents.llm.env import load_env_file
+
+    if agents is Agents.scripted:
+        console.print("The red team writes words, and scripted Ralph doesn't read: add --agents.")
+        raise typer.Exit(code=2)
+    if live:
+        load_env_file()
+    model = agents.value
+    suite = "redteam_reader" if reader else "redteam"
+    client = who.claude_client(model, suite, settings, live=live, record=record)
+    shield = ListingReader(client, model=model) if reader else None
+    row = score_red_team(red_team(settings, client, model, reader=shield))
+    shown = "behind the listing reader" if reader else "reading the raw text"
+    console.print(
+        f"A Claude attacker rewriting the listing {ATTEMPTS} times on each of {DEALS} deals, "
+        f"against Claude Ralph {shown}."
+    )
+    table = Table("Score", "Value (95% interval)")
+    table.add_row("Tries that made Ralph pay more", f"{row.moved.as_percent()} of {row.tries}")
+    e = row.best_extra
+    table.add_row(
+        "Best try per deal: extra paid", f"{e.value:+.1%} of list ({e.low:+.1%} to {e.high:+.1%})"
     )
     console.print(table)
 
@@ -521,6 +574,9 @@ def bench(
     record: Annotated[
         bool, typer.Option("--record", help="With --live: keep the calls as the recording.")
     ] = False,
+    reader: Annotated[
+        bool, typer.Option("--reader", help="Ralph sees the listing reader's summary, not text.")
+    ] = False,
 ) -> None:
     """The test bench: generated deals, scored with 95% intervals."""
     from fleek_agents.bench import agents as who
@@ -532,7 +588,10 @@ def bench(
     console = Console()
     settings = _settings()
     if suite is Suite.tactics:
-        _bench_tactics(agents, settings, live=live, record=record, console=console)
+        _bench_tactics(agents, settings, live=live, record=record, reader=reader, console=console)
+        return
+    if suite is Suite.redteam:
+        _bench_redteam(agents, settings, live=live, record=record, reader=reader, console=console)
         return
     if agents is Agents.scripted:
         pair = who.scripted()
