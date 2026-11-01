@@ -14,7 +14,8 @@ from fleek_agents.domain.events import EscalationReason, Event
 from fleek_agents.domain.offers import OfferCard
 from fleek_agents.domain.replay import Snapshot, apply
 from fleek_agents.domain.state import Actor, Move, NegotiationState, next_state
-from fleek_agents.store import approvals as _approvals  # noqa: F401  (its table goes with the log)
+from fleek_agents.store import approvals as _approvals  # noqa: F401  (tables that go with the log)
+from fleek_agents.store import offers as _offers  # noqa: F401
 from fleek_agents.store.db import Base
 
 

@@ -35,9 +35,19 @@ class NoTriesLeft(Exception):
 
 
 def open_negotiation(
-    log: EventLog, *, buyer_id: str, lot_id: str, clock: Clock, rules: NegotiationRules
+    log: EventLog,
+    *,
+    buyer_id: str,
+    lot_id: str,
+    clock: Clock,
+    rules: NegotiationRules,
+    invited: bool = False,
 ) -> str:
-    """Record the pairing and start the negotiation, together. Returns its id."""
+    """Record the pairing and start the negotiation, together. Returns its id.
+
+    invited: the seller sent this buyer an offer, so the cooldown doesn't apply. The cap on
+    tries still does.
+    """
     now, cooldown = clock.now(), timedelta(hours=rules.cooldown_hours)
     earlier_ones = negotiations_between(log.session, buyer_id, lot_id)
     failed = sum(log.saved(n).state in FAILED_ENDINGS for n in earlier_ones)
@@ -50,7 +60,9 @@ def open_negotiation(
         if snap.state not in FINAL_STATES:
             raise AlreadyNegotiating(f"{buyer_id} is already negotiating for {lot_id}")
         ended_at = snap.updated_at
-        if snap.state in FAILED_ENDINGS and ended_at is not None and now < ended_at + cooldown:
+        if invited or snap.state not in FAILED_ENDINGS or ended_at is None:
+            continue
+        if now < ended_at + cooldown:
             raise CoolingDown(
                 f"{buyer_id} can retry {lot_id} from {ended_at + cooldown:%d %b %H:%M}"
             )

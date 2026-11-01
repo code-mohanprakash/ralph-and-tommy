@@ -10,7 +10,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import timedelta
 
-from fleek_agents.agents.base import Accept, Agent, HandOff, Send, View, WalkAway
+from fleek_agents.agents.base import Accept, Action, Agent, HandOff, Send, View, WalkAway
 from fleek_agents.config import Settings
 from fleek_agents.domain.bands import Band
 from fleek_agents.domain.events import EscalationReason
@@ -62,6 +62,9 @@ class Deal:
     # The lot as Ralph sees it. With the listing reader on, its description is the reader's
     # fixed summary, not the seller's words (harness/reader.py). Tommy and every check use `lot`.
     buyer_lot: Lot | None = None
+    # The seller's offer to a buyer who walked away (orchestrator/offers.py): the referee
+    # accepts any buyer offer at or above it on the seller's behalf.
+    promised: Pence | None = None
 
 
 def _inside_own_limit(
@@ -107,8 +110,14 @@ def take_step(log: EventLog, deal: Deal, *, clock: FakeClock, settings: Settings
         band=buyer_band_of if buyers_turn else seller_band_of,
         today=clock.now().date(),
         elsewhere=deal.elsewhere() if buyers_turn else (),
+        promised=deal.promised if buyers_turn else None,
     )
-    action = (deal.ralph if buyers_turn else deal.tommy).decide(view)
+    offer = view.on_table
+    if not buyers_turn and deal.promised is not None and offer is not None:
+        # The seller already said yes to this price: code keeps the promise, Tommy isn't asked.
+        action: Action = Accept() if offer.base_price >= deal.promised else deal.tommy.decide(view)
+    else:
+        action = (deal.ralph if buyers_turn else deal.tommy).decide(view)
     within_budget = deal.within_budget
     # The buyer's offers and accepts must fit their budget across all their deals.
     if (
@@ -197,6 +206,7 @@ def run_negotiation(
     settings: Settings,
     within_budget: Callable[[Pence], bool] = lambda _: True,
     buyer_lot: Lot | None = None,
+    promised: Pence | None = None,
 ) -> NegotiationState:
     deal = Deal(
         negotiation_id,
@@ -210,6 +220,7 @@ def run_negotiation(
         tommy,
         within_budget,
         buyer_lot=buyer_lot,
+        promised=promised,
     )
     for _ in range(settings.negotiation.max_rounds + 2):
         if not take_step(log, deal, clock=clock, settings=settings):
