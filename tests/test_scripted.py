@@ -307,3 +307,61 @@ def test_tommy_gives_more_ground_close_to_a_public_sell_by_date() -> None:
         assert isinstance(action, Send)
         steps.append(action.terms.base_price)
     assert steps[0] == steps[1] > steps[2]  # only a near date speeds him up
+
+
+def buyer_view(history: tuple[int, ...], rounds_left: int, top: int) -> View:
+    """Ralph's turn. Cards alternate buyer then seller; his band is inside up to `top`."""
+    from datetime import timedelta
+
+    from fleek_agents.domain.bands import Band
+    from fleek_agents.domain.offers import OfferCard, Role
+
+    cards = tuple(
+        OfferCard(
+            negotiation_id="neg-0001",
+            round=n + 1,
+            from_role=Role.BUYER if n % 2 == 0 else Role.SELLER,
+            base_price=Pence(price),
+            bundles=1,
+            prepaid=False,
+            ship_by=TODAY + timedelta(days=21),
+            expires_at=T0 + timedelta(hours=48),
+        )
+        for n, price in enumerate(history)
+    )
+    return View(
+        lot=LOT,
+        want=WANT,
+        bundles=1,
+        list_price=LOT.base_price,
+        history=cards,
+        rounds_left=rounds_left,
+        band=lambda p: Band.STRETCH if p.value <= top else Band.OUTSIDE,
+        today=TODAY,
+    )
+
+
+def offered(action: object) -> int:
+    assert isinstance(action, Send)
+    return action.terms.base_price.value
+
+
+def test_when_halfway_is_past_his_limit_ralph_offers_his_best_and_holding_ralph_holds() -> None:
+    from fleek_agents.scripted import HoldingRalph
+
+    view = buyer_view((1000, 1400), rounds_left=4, top=1130)  # halfway, 1200, is past 1130
+    assert offered(ScriptedRalph().decide(view)) == 1130  # the highest 5p inside his limit
+    assert offered(HoldingRalph().decide(view)) == 1000  # the old way: hold, and lose the deal
+
+
+def test_ralph_s_last_card_is_his_best_inside_his_limit() -> None:
+    from fleek_agents.scripted import HoldingRalph
+
+    view = buyer_view((1000, 1400), rounds_left=2, top=1250)  # halfway, 1200, is inside
+    assert offered(ScriptedRalph().decide(view)) == 1250  # Tommy answers it, then it's over
+    assert offered(HoldingRalph().decide(view)) == 1200
+
+
+def test_ralph_never_offers_past_his_limit_or_below_his_last_offer() -> None:
+    view = buyer_view((1000, 1400), rounds_left=2, top=990)  # already past it: he can only hold
+    assert offered(ScriptedRalph().decide(view)) == 1000

@@ -39,8 +39,8 @@ a different seller wins on rating and dispatch.
 | Way out | Measured | Fix | After |
 |---|---|---|---|
 | Said in words | 0 of over 4,100 calls | the secret never goes in | 0 |
-| From Tommy's moves | 62% of floors found within 2% | secret margin | 37%, for 4 points of deals |
-| | | **firm mode** (seller's choice) | **0**, tested card for card, for about 40 points of deals |
+| From Tommy's moves | 62% of floors found within 2% | secret margin | 37%; 99% of deals that work still close |
+| | | **firm mode** (seller's choice) | **0**, tested card for card, for about 44 points of deals |
 | By probing matching | exact floor in about 12 accounts | match gate, crowd count | 48% within 2%; crowds flagged |
 | Pressure in listing text | +2.0% of list | reader / **blind mode** | +0.7% / **0** by construction |
 
@@ -103,7 +103,7 @@ with backoff and batching are the engineering; none of the scale-out is built he
 | Chose | Over | Because | Cost |
 |---|---|---|---|
 | Secrets in code, AI sees band words | the AI holding the limits | an AI can be talked into anything; code can't | agents negotiate with less information |
-| Secret margin (8%) as default | firm price | Fleek earns 15% of delivered orders; haggling closes 97% of deals, firm 56% | 37% of floors still guessable within 2% |
+| Secret margin (8%) as default | firm price | Fleek earns 15% of delivered orders; haggling closes 100% of deals that work, firm 56% | 37% of floors still guessable within 2%; 1 deal in 168 lost to the hidden floor |
 | Match gate | open matching | open matching gave floors away exactly | 5% of real matches lost |
 | Blind mode in the demo | Ralph reading listings | zero text manipulation | Ralph can't use sizes or defects from text |
 | People for decisions that matter | people on every deal | deals expire waiting, and earn nothing | a judgement call on thresholds |

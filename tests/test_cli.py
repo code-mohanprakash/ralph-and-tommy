@@ -1,4 +1,5 @@
 import json
+import re
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -115,12 +116,17 @@ def test_a_deal_waits_then_a_person_approves_it(tmp_path: Path) -> None:
 def test_the_call_list_comes_from_the_deals_file(tmp_path: Path) -> None:
     db = str(tmp_path / "fleek.db")
     assert "No near misses" in runner.invoke(app, ["digest", "--db", db]).output
-    for buyer in ("buyer-0020", "buyer-0037"):
-        runner.invoke(
-            app, ["negotiate", "--mock", "--buyer", buyer, "--matcher", "words", "--db", db]
-        )
+    # buyer-0020 agrees close to the counter; a person turning it down makes it worth a call.
+    agreed = runner.invoke(
+        app,
+        ["negotiate", "--mock", "--buyer", "buyer-0020", "--matcher", "words", "--db", db],
+        env={"COLUMNS": "200"},
+    ).output
+    waiting = re.search(r"fleek approve (neg-\d+)", agreed)
+    assert waiting is not None
+    runner.invoke(app, ["reject", waiting.group(1), "--db", db])
     listed = runner.invoke(app, ["digest", "--db", db], env={"COLUMNS": "200"})
-    assert "buyer-0020" in listed.output and "walked_away" in listed.output
+    assert "buyer-0020" in listed.output and "rejected" in listed.output
 
 
 def test_the_no_channel_check_fails_for_the_right_reason(monkeypatch: pytest.MonkeyPatch) -> None:

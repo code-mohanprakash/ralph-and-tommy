@@ -35,7 +35,7 @@ recordings).
 | The results in EVALS.md come from the recordings in the repo | [`tests/test_sim.py`](../tests/test_sim.py) replays both Claude runs and checks the same results |
 | No secret limit appears in any recorded Claude request or response (over 4,100 calls) | Canary searches over every tapped call: [`tests/test_bench_moves.py`](../tests/test_bench_moves.py), [`tests/test_bench_tactics.py`](../tests/test_bench_tactics.py), [`tests/test_redteam.py`](../tests/test_redteam.py), each with a planted-canary check in [`tests/test_bench.py`](../tests/test_bench.py) |
 | No recorded Claude negotiation on the bench ends outside a limit (0 of 510, 95% upper bound 0.59%) | The same three test files |
-| Attackers that know the code get within 2% of Tommy's floor on 62% of lots; an 8% secret margin cuts that to 37% for 4 points of deals | [`tests/test_bench_moves.py`](../tests/test_bench_moves.py), [`tests/test_privacy.py`](../tests/test_privacy.py); `fleek leak --sweep` redraws the chart |
+| Attackers that know the code get within 2% of Tommy's floor on 62% of lots; an 8% secret margin cuts that to 37%, and 99% of deals that work still close (1 of 168 lost to the hidden floor) | [`tests/test_bench_moves.py`](../tests/test_bench_moves.py), [`tests/test_privacy.py`](../tests/test_privacy.py); `fleek leak --sweep` redraws the chart |
 | With the privacy layer on, no counter goes below the floor Tommy works to, and no deal breaks a real limit | [`tests/test_privacy.py`](../tests/test_privacy.py) (100 lots, both Tommy styles) |
 | The match gate never gives a false yes, and its budget is per lot, not per account | [`tests/test_gate.py`](../tests/test_gate.py), [`tests/test_funnel.py`](../tests/test_funnel.py) |
 | Behind the listing reader, none of the seller's words reach Ralph | Text by text over every recorded run: [`tests/test_bench_tactics.py`](../tests/test_bench_tactics.py), [`tests/test_redteam.py`](../tests/test_redteam.py); a spy on both sides in [`tests/test_reader.py`](../tests/test_reader.py) |
@@ -98,8 +98,8 @@ recordings).
   missed. A 10% grid halves that, for more lost matches.
 - **Every haggle reveals something about a limit.** Measured: an attacker who knows the code
   gets within 2% of Tommy's floor on 62% of lots. A secret margin of M% caps that at about 4/M
-  and costs deals: 4 points on the bench, about 10% of real matches on the seeded market. Firm
-  mode reveals nothing and costs about 40 points of deals. Which to use is a business choice,
+  and costs deals: 1 in 168 on the bench, about 10% of real matches on the seeded market. Firm
+  mode reveals nothing and costs about 44 points of deals. Which to use is a business choice,
   best made on Fleek's own past deals.
 
 **About running it for real**

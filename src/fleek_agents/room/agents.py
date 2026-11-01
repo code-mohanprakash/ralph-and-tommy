@@ -21,7 +21,7 @@ from fleek_agents.llm.client import LiveClient, LLMClient
 from fleek_agents.llm.replay import RecordingClient, ReplayClient
 from fleek_agents.room.play import RoomRun, run_room
 from fleek_agents.room.scenario import SCENARIOS, RoomInput
-from fleek_agents.scripted import ScriptedRalph, ScriptedTommy
+from fleek_agents.scripted import HoldingRalph, ScriptedTommy
 
 RECORDINGS = Path(__file__).parent / "recordings"
 MODEL_NAMES = {"claude-haiku-5-5": "Claude Haiku 5.5", "claude-sonnet-5-5": "Claude Sonnet 5.5"}
@@ -45,7 +45,7 @@ def _claude(client: LLMClient, model: str) -> tuple[Agent, Agent]:
 
 
 def scripted() -> AgentPair:
-    return lambda _room: (ScriptedRalph(), ScriptedTommy())
+    return lambda _room: (HoldingRalph(), ScriptedTommy())  # its stories need a buyer who holds
 
 
 def replayed(model: str) -> AgentPair:

@@ -798,13 +798,26 @@ def leak(
         from fleek_agents.bench.tradeoff import sweep as measure_all
 
         points = measure_all(settings, progress=lambda s: console.print(f"  measuring {s}"))
-        table = Table("Setting", "Strongest attacker", "Within 2%", "Deals closed", "Passes")
+        table = Table(
+            "Setting",
+            "Strongest attacker",
+            "Within 2%",
+            "Deals closed",
+            "Lost to the hidden floor",
+            "Lost in haggling",
+            "Buyer's share",
+            "Passes",
+        )
         for point in points:
+            lost = point.lost
             table.add_row(
                 point.label,
                 point.strongest.attacker,
                 point.strongest.within.as_percent(),
                 point.deals.as_percent(),
+                f"{lost.hidden_floor} of {lost.works}" if lost else "-",
+                f"{lost.haggling} of {lost.works}" if lost else "-",
+                point.buyer_share.as_percent(),
                 "yes" if point.passes(points[0]) else "no",
             )
         console.print(table)
