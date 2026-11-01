@@ -105,7 +105,9 @@ def test_a_deal_waits_then_a_person_approves_it(tmp_path: Path) -> None:
     assert "Waiting for a person" in flat and "fleek approve neg-0001" in flat
     listed = runner.invoke(app, ["approvals", "--db", db], env={"COLUMNS": "200"})
     assert "neg-0001" in listed.output and "£1,500 or more" in listed.output  # £2,332.50 deal
-    done = runner.invoke(app, ["approve", "neg-0001", "--db", db])
+    wrong = runner.invoke(app, ["approve", "neg-0001", "--db", db, "--as", "seller"])
+    assert wrong.exit_code != 0  # the seller wasn't asked: only the account manager was
+    done = runner.invoke(app, ["approve", "neg-0001", "--db", db, "--as", "account_manager"])
     assert done.exit_code == 0 and "approved and closed" in done.output
     assert "Nothing waiting" in runner.invoke(app, ["approvals", "--db", db]).output
 

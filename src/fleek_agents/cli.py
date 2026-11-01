@@ -25,8 +25,8 @@ from fleek_agents.market.seed import generate_market
 from fleek_agents.matching.embeddings import Embedder, HashingEmbedder, LocalEmbedder
 from fleek_agents.matching.funnel import bundles_for, possible_deals
 from fleek_agents.matching.ranking import rank
+from fleek_agents.orchestrator.approval import Approver, pending, settle
 from fleek_agents.orchestrator.approval import approve as approve_deal
-from fleek_agents.orchestrator.approval import pending, settle
 from fleek_agents.orchestrator.approval import reject as reject_deal
 from fleek_agents.orchestrator.clock import FakeClock
 from fleek_agents.orchestrator.opening import open_negotiation
@@ -243,9 +243,10 @@ def approvals(
     if not waiting:
         console.print("Nothing waiting for approval.")
         return
-    table = Table("Negotiation", "Buyer", "Lot", "Buyer pays", "Why it's waiting")
+    table = Table("Negotiation", "Buyer", "Lot", "Buyer pays", "Waiting for", "Why")
     for w in waiting:
-        table.add_row(w.negotiation_id, w.buyer_id, w.lot.title, str(w.total), w.why)
+        who = ", ".join(a.who.replace("_", " ") for a in w.asks) or "account manager"
+        table.add_row(w.negotiation_id, w.buyer_id, w.lot.title, str(w.total), who, w.why)
     console.print(table)
 
 
@@ -253,21 +254,31 @@ def approvals(
 def approve(
     negotiation: Annotated[str, typer.Argument(help="e.g. neg-0001")],
     db: Annotated[str, typer.Option(help="The deals file.")] = "fleek.db",
+    who: Annotated[
+        Approver, typer.Option("--as", help="Who is saying yes.")
+    ] = Approver.ACCOUNT_MANAGER,
 ) -> None:
-    """Approve a waiting deal: it closes."""
+    """Approve a waiting deal: it closes once everyone asked has said yes."""
     session, _ = _session(db, 2026)
-    approve_deal(EventLog(session), negotiation, at=datetime.now(UTC))
-    Console().print(f"{negotiation} approved and closed.")
+    log = EventLog(session)
+    approve_deal(log, negotiation, at=datetime.now(UTC), by=who)
+    if log.state(negotiation) is NegotiationState.CLOSED:
+        Console().print(f"{negotiation} approved and closed.")
+    else:
+        Console().print(f"{negotiation}: your yes is recorded. Still waiting for someone else.")
 
 
 @app.command()
 def reject(
     negotiation: Annotated[str, typer.Argument(help="e.g. neg-0001")],
     db: Annotated[str, typer.Option(help="The deals file.")] = "fleek.db",
+    who: Annotated[
+        Approver, typer.Option("--as", help="Who is saying no.")
+    ] = Approver.ACCOUNT_MANAGER,
 ) -> None:
     """Reject a waiting deal: the lot goes back on sale."""
     session, _ = _session(db, 2026)
-    reject_deal(EventLog(session), negotiation, at=datetime.now(UTC))
+    reject_deal(EventLog(session), negotiation, at=datetime.now(UTC), by=who)
     Console().print(f"{negotiation} rejected. The lot is back on sale.")
 
 
