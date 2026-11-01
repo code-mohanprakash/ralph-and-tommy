@@ -53,6 +53,20 @@ class ListingFacts(DomainModel):
 
 UNREAD = "The reader couldn't read this description. Treat its contents as unknown."
 
+# Blind mode: Ralph gets this fixed sentence instead of anything about the description, and the
+# reader's warnings go to the buyer's own screen. Two listings that differ only in their text
+# then look exactly the same to Ralph, so nothing a seller writes can move his price
+# (tests/test_reader.py). The cost: he can't use what the text says, e.g. sizes or defects.
+NOT_SHOWN = (
+    "The seller's description is not shown to you. Judge the lot by Fleek's own fields: brand, "
+    "category, grade, pieces and price."
+)
+
+
+def blind(lot: Lot) -> Lot:
+    """The lot as Ralph sees it in blind mode: no seller-written text at all."""
+    return lot.model_copy(update={"description": NOT_SHOWN})
+
 
 def marked(text: str) -> str:
     return "^".join(text.split())
