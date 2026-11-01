@@ -10,9 +10,15 @@ from fleek_agents.scripted.common import INSIDE, _round5, _terms
 class ScriptedRalph:
     """Opens low, moves halfway towards the seller each round, never past his own limit.
 
+    When halfway is past his limit he doesn't hold: he offers the highest price still inside it.
+    His last card is his best and final: the highest price inside his limit, up to the counter.
+    Holding used to lose deals that had room: the rounds ran out before Tommy came down to him.
+
     On a firm-price lot there's nothing to haggle: he offers the firm price if it's inside his
     limit, and walks away if it isn't.
     """
+
+    best_offer = True  # HoldingRalph turns this off
 
     def decide(self, view: View) -> Action:
         counter, firm = view.on_table, view.lot.firm_price
@@ -42,6 +48,41 @@ class ScriptedRalph:
         halfway = _round5((last.value + counter.base_price.value) // 2)
         if band is Band.STRETCH and view.rounds_left <= 1:
             return Accept()
+        if not self.best_offer:
+            if halfway > last and view.band(halfway) in INSIDE:
+                return Send(terms=_terms(view, halfway))
+            return Send(terms=_terms(view, last))  # can't move up: hold (offers can't go down)
+        if view.rounds_left <= 2:  # his last card: Tommy answers it, then the rounds are over
+            return Send(
+                terms=_terms(view, _highest_inside(view, low=last, high=counter.base_price))
+            )
         if halfway > last and view.band(halfway) in INSIDE:
             return Send(terms=_terms(view, halfway))
-        return Send(terms=_terms(view, last))  # can't move up: hold (offers can't go down)
+        best = _highest_inside(view, low=last, high=halfway)
+        return Send(terms=_terms(view, best))  # his best; if it's his last, hold (never go down)
+
+
+class HoldingRalph(ScriptedRalph):
+    """The first scripted Ralph: when halfway is past his limit, he holds his last offer.
+
+    Real buyers do this, and it loses deals that had room. The Deal Room uses him, because its
+    near-miss story and the account manager's call list need a negotiation that ends close.
+    """
+
+    best_offer = False
+
+
+def _highest_inside(view: View, *, low: Pence, high: Pence) -> Pence:
+    """The highest whole-5p price from `low` (inside) up to `high` that is still inside his limit.
+
+    A binary search over his own band words: he learns where his limit is to the nearest 5p,
+    which is his own number and goes nowhere.
+    """
+    lo, hi = low.value // 5, high.value // 5  # in steps of 5p; lo is inside
+    while lo < hi:
+        middle = (lo + hi + 1) // 2
+        if view.band(Pence(middle * 5)) in INSIDE:
+            lo = middle
+        else:
+            hi = middle - 1
+    return Pence(max(low.value, lo * 5))

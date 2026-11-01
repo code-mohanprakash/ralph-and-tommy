@@ -15,7 +15,7 @@ from fleek_agents.domain.money import Pence
 from fleek_agents.humans.handover import STOPPED
 from fleek_agents.room.play import run_room
 from fleek_agents.room.scenario import SCENARIOS, RoomInput
-from fleek_agents.scripted import ScriptedRalph, ScriptedTommy
+from fleek_agents.scripted import HoldingRalph, ScriptedTommy
 
 ROOT = Path(__file__).parent.parent
 SCENARIO = {x.key: x for x in SCENARIOS}
@@ -40,7 +40,7 @@ def test_a_summary_is_written_exactly_when_a_person_is_needed(
     settings: Settings, key: str, kind: str | None
 ) -> None:
     run = run_room(
-        SCENARIO[key].room, ralph=ScriptedRalph(), tommy=ScriptedTommy(), settings=settings
+        SCENARIO[key].room, ralph=HoldingRalph(), tommy=ScriptedTommy(), settings=settings
     )
     assert (run.handover.kind if run.handover else None) == kind
 
@@ -48,7 +48,7 @@ def test_a_summary_is_written_exactly_when_a_person_is_needed(
 @pytest.mark.parametrize("key", ["deal", "broken", "near_miss"])
 def test_a_summary_never_holds_a_secret_limit(settings: Settings, key: str) -> None:
     room = SCENARIO[key].room
-    run = run_room(room, ralph=ScriptedRalph(), tommy=ScriptedTommy(), settings=settings)
+    run = run_room(room, ralph=HoldingRalph(), tommy=ScriptedTommy(), settings=settings)
     assert run.handover is not None
     text = json.dumps(asdict(run.handover), default=str, ensure_ascii=False)
     edges = [run.limits.buyer_highest, run.limits.seller_lowest]
@@ -60,7 +60,7 @@ def test_a_summary_never_holds_a_secret_limit(settings: Settings, key: str) -> N
 
 def test_the_approval_summary_says_what_is_at_stake(settings: Settings) -> None:
     run = run_room(
-        SCENARIO["deal"].room, ralph=ScriptedRalph(), tommy=ScriptedTommy(), settings=settings
+        SCENARIO["deal"].room, ralph=HoldingRalph(), tommy=ScriptedTommy(), settings=settings
     )
     h = run.handover
     assert h is not None
@@ -76,7 +76,7 @@ def test_the_approval_summary_says_what_is_at_stake(settings: Settings) -> None:
 
 def test_the_near_miss_summary_gives_the_gap(settings: Settings) -> None:
     run = run_room(
-        SCENARIO["near_miss"].room, ralph=ScriptedRalph(), tommy=ScriptedTommy(), settings=settings
+        SCENARIO["near_miss"].room, ralph=HoldingRalph(), tommy=ScriptedTommy(), settings=settings
     )
     h = run.handover
     assert h is not None
@@ -89,7 +89,7 @@ class GreedyRalph:
     """A Ralph broken on purpose: his second offer is £50 a pair, far past any max here."""
 
     def __init__(self) -> None:
-        self._inner, self._offers = ScriptedRalph(), 0
+        self._inner, self._offers = HoldingRalph(), 0
 
     def decide(self, view: View) -> Action:
         action = self._inner.decide(view)
@@ -112,7 +112,7 @@ def test_a_stop_on_the_buyers_side_sends_the_call_to_the_buyer(settings: Setting
 
 def test_the_seller_side_stop_sends_the_call_to_the_seller(settings: Settings) -> None:
     run = run_room(
-        SCENARIO["broken"].room, ralph=ScriptedRalph(), tommy=ScriptedTommy(), settings=settings
+        SCENARIO["broken"].room, ralph=HoldingRalph(), tommy=ScriptedTommy(), settings=settings
     )
     h = run.handover
     assert h is not None

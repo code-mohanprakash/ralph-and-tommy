@@ -34,7 +34,7 @@ from fleek_agents.room.scenario import (
 )
 from fleek_agents.room.server import BadRequest, Room, make_server, read_input
 from fleek_agents.room.story import story
-from fleek_agents.scripted import ScriptedRalph, ScriptedTommy
+from fleek_agents.scripted import HoldingRalph, ScriptedTommy
 from fleek_agents.store.db import Base, make_engine
 from fleek_agents.store.events import EventLog
 from fleek_agents.store.market import load_market
@@ -49,7 +49,7 @@ def settings() -> Settings:
 
 
 def play(room: RoomInput, settings: Settings) -> dict[str, Any]:
-    return story(run_room(room, ralph=ScriptedRalph(), tommy=ScriptedTommy(), settings=settings))
+    return story(run_room(room, ralph=HoldingRalph(), tommy=ScriptedTommy(), settings=settings))
 
 
 def test_the_default_room_tells_the_whole_deal_in_order(settings: Settings) -> None:
@@ -149,7 +149,7 @@ def test_every_deal_lands_between_the_two_edges(settings: Settings) -> None:
 def test_watching_the_agents_changes_nothing_they_do(settings: Settings) -> None:
     """The same deal, run with plain run_negotiation, records exactly the same moves."""
     room = DEFAULT
-    run = run_room(room, ralph=ScriptedRalph(), tommy=ScriptedTommy(), settings=settings)
+    run = run_room(room, ralph=HoldingRalph(), tommy=ScriptedTommy(), settings=settings)
     assert run.lot is not None and run.negotiation_id is not None
     market = room_market(room.pairs)
     secrets = room_secrets(market, room)
@@ -170,7 +170,7 @@ def test_watching_the_agents_changes_nothing_they_do(settings: Settings) -> None
             bundles=run.bundles,
             buyer_limit=secrets.buyers["buyer-9001"],
             seller_limit=secrets.lots[run.lot.id],
-            ralph=ScriptedRalph(),
+            ralph=HoldingRalph(),
             tommy=ScriptedTommy(),
             clock=clock,
             settings=settings,
@@ -213,7 +213,7 @@ def test_the_story_carries_the_account_managers_summary(settings: Settings) -> N
 
 def test_the_near_miss_had_a_price_and_lands_on_the_call_list(settings: Settings) -> None:
     run = run_room(
-        SCENARIO["near_miss"].room, ralph=ScriptedRalph(), tommy=ScriptedTommy(), settings=settings
+        SCENARIO["near_miss"].room, ralph=HoldingRalph(), tommy=ScriptedTommy(), settings=settings
     )
     lowest, highest = run.limits.seller_lowest, run.limits.buyer_highest
     assert lowest is not None and highest is not None and lowest <= highest  # a deal was possible
