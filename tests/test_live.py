@@ -113,3 +113,25 @@ def test_no_lot_that_fits_means_no_agent_is_called() -> None:
 
     live = LiveSession(setup(buyer__category="shoes"), SETTINGS, no_agents, "test")
     assert live.view()["state"] == "no_match" and live.step() is False
+
+
+def test_the_recorded_claude_session_replays_and_no_secret_reaches_the_model() -> None:
+    from fleek_agents.agents.claude import ClaudeAgent
+    from fleek_agents.bench.episode import TapClient
+    from fleek_agents.live.agents import cassette
+    from fleek_agents.llm.replay import ReplayClient
+
+    tap = TapClient(ReplayClient(cassette("claude-haiku-5-5")))
+
+    def claude() -> tuple[Agent, Agent]:
+        return (
+            ClaudeAgent(tap, model="claude-haiku-5-5", prompt="ralph"),
+            ClaudeAgent(tap, model="claude-haiku-5-5", prompt="tommy"),
+        )
+
+    live = run(LiveSession(setup(), SETTINGS, claude, "replay"))
+    assert live.view()["state"] == "pending_approval"
+    seen = "\n".join(tap.seen)
+    assert "get_lot" in seen  # the search covers what the model was sent and said
+    for secret in ("935", "9.35", "1550", "15.50", "1800", "18.00"):
+        assert secret not in seen, secret
