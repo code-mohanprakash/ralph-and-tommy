@@ -497,6 +497,9 @@ def live_demo(
         bool,
         typer.Option("--record", help="Record Claude on the ready-made onboarding, then stop."),
     ] = False,
+    matcher: Annotated[
+        Matcher, typer.Option(help="How lots are ranked by fit: a local model, or shared words.")
+    ] = Matcher.local,
 ) -> None:
     """The live demo: the seller and the buyer type in their side, then watch both screens."""
     import webbrowser
@@ -522,11 +525,12 @@ def live_demo(
     name = {"claude-haiku-5-5": "Claude Haiku 5.5", "claude-sonnet-5-5": "Claude Sonnet 5.5"}[
         model.value
     ]
+    embedder: Embedder = LocalEmbedder() if matcher is Matcher.local else HashingEmbedder()
     if record:
         load_env_file()
         setup = Setup.model_validate(PRESET | {"agents": "claude"})
         pair = who.recording(model.value, settings)
-        session = LiveSession(setup, settings, pair, name)
+        session = LiveSession(setup, settings, pair, name, embedder=embedder)
         while session.step():
             pass
         console.print(f"Recorded {name} on the ready-made onboarding: {session.state}.")
@@ -536,7 +540,11 @@ def live_demo(
         claude = (who.live(model.value, settings), f"{name}, live")
     else:
         claude = (who.replayed(model.value), f"{name}, replayed (ready-made onboarding only)")
-    desk = Desk(settings, {"scripted": (who.scripted, "Scripted agents, no AI"), "claude": claude})
+    desk = Desk(
+        settings,
+        {"scripted": (who.scripted, "Scripted agents, no AI"), "claude": claude},
+        embedder=embedder,
+    )
     try:
         server = make_server(desk, port)
     except OSError:

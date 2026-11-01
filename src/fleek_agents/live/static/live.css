@@ -111,7 +111,7 @@ summary { cursor: pointer; font-size: 13px; font-weight: 600; margin-bottom: 8px
 .controls button { font-size: 13px; }
 .fleek { margin-top: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
 .fleek > header { display: flex; gap: 10px; align-items: baseline; margin-bottom: 8px; }
-.fleek-body { display: grid; grid-template-columns: 1fr 1.6fr 1fr; gap: 16px; }
+.fleek-body { display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 16px; margin-top: 14px; }
 .fleek ul { list-style: none; padding: 0; margin: 0; font-size: 13px; display: grid; gap: 4px; }
 .fleek .ask { margin: 8px 0 0; }
 
@@ -124,3 +124,19 @@ summary { cursor: pointer; font-size: 13px; font-weight: 600; margin-bottom: 8px
   .grid .wide { grid-column: auto; }
 }
 .pick { margin-bottom: 12px; max-width: 420px; }
+.funnel { border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+.steps-row { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; margin: 0 0 8px; font-size: 13px; }
+.steps-row li { background: var(--soft); border-radius: 999px; padding: 3px 10px; }
+.steps-row li + li::before { content: "→ "; color: var(--muted); }
+.table-wrap { overflow-x: auto; }
+.funnel table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.funnel th { text-align: left; font-weight: 600; color: var(--muted); padding: 4px 8px; border-bottom: 1px solid var(--line); }
+.funnel td { padding: 4px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.funnel tr.filters td { color: var(--muted); }
+.funnel tr.vault td:first-child { color: var(--bad); }
+.funnel tr.ranked td:first-child { font-weight: 600; }
+.funnel tr.current { background: var(--ralph-bg); }
+.funnel p { margin-top: 6px; }
+.metrics { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: 13px; margin: 0 0 8px; }
+.metrics dt { color: var(--muted); }
+.metrics dd { margin: 0; font-variant-numeric: tabular-nums; }
