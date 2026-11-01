@@ -17,6 +17,8 @@ def buyer_ok(buyer: BuyerMandate, *, base_price: Pence, shipping: Pence, pieces:
 
 
 def seller_ok(seller: SellerMandate, *, base_price: Pence, pieces: int) -> bool:
+    if seller.firm_price is not None:  # firm mode: the floor isn't consulted at all
+        return base_price >= seller.firm_price
     net = seller_receives(base_price=base_price, pieces=pieces).net
     return net >= seller.floor_per_piece.reveal().times(pieces)
 

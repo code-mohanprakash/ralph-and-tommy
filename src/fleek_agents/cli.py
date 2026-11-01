@@ -625,6 +625,29 @@ class Route(StrEnum):
     matching = "matching"  # what matching's yes/no gives away to many accounts
 
 
+def _firm_against_haggle(settings: Settings, console: Console) -> None:
+    from fleek_agents.bench.firm import OTHER_FLOOR_PCT, firm_report
+
+    rows = firm_report(settings)
+    table = Table(
+        "Mode", "Lots", "Deals closed", "Fleek's commission", "Floor changed what the buyer saw"
+    )
+    for row in rows:
+        table.add_row(
+            row.label,
+            str(row.lots),
+            row.deals.as_percent(),
+            f"{row.commission_vs_haggle:.0%} of haggling",
+            f"{row.floor_shows} of {row.lots} lots",
+        )
+    console.print(table)
+    console.print(
+        f"Each lot was negotiated twice, the second time with the floor at {OTHER_FLOOR_PCT}% of "
+        "the first. In firm mode the buyer saw exactly the same cards both times on every lot: "
+        "the floor never reached them. A lot whose floor is above the firm price can't use it."
+    )
+
+
 @app.command()
 def leak(
     route: Annotated[Route, typer.Option(help="Which way the secret could get out.")] = Route.moves,
@@ -639,6 +662,10 @@ def leak(
     ] = False,
     sweep: Annotated[
         bool, typer.Option("--sweep", help="Measure every setting and draw the trade-off chart.")
+    ] = False,
+    firm: Annotated[
+        bool,
+        typer.Option("--firm", help="Compare haggling with firm mode: deals, commission, leaks."),
     ] = False,
     chart_file: Annotated[
         Path, typer.Option("--chart", help="Where --sweep writes its chart.")
@@ -668,6 +695,12 @@ def leak(
     if route is Route.matching:
         _leak_through_matching(settings, privacy, console)
         return
+    if privacy:
+        rules = settings.privacy.model_copy(update={"on": True})
+        settings = settings.model_copy(update={"privacy": rules})
+    if firm:
+        _firm_against_haggle(settings, console)
+        return
     if sweep:
         from fleek_agents.bench.tradeoff import chart
         from fleek_agents.bench.tradeoff import sweep as measure_all
@@ -687,9 +720,6 @@ def leak(
         chart_file.write_text(chart(points), encoding="utf-8")
         console.print(f"Chart written to {chart_file}.")
         return
-    if privacy:
-        rules = settings.privacy.model_copy(update={"on": True})
-        settings = settings.model_copy(update={"privacy": rules})
     if tommy is Agents.scripted:
         if boulware:
             rows = moves_report(settings, tommy=boulware_tommy, model=BoulwareTommy)

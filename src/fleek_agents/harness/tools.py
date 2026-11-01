@@ -67,6 +67,15 @@ class WalkAwayInput(DomainModel):
 
 def _lot_facts(view: View) -> str:
     lot = view.lot
+    firm = (
+        {
+            "firm_price_per_piece_pence": lot.firm_price.value,
+            "firm_note": "Firm mode: the seller sells at this base price or above, never below. "
+            "It is public. An offer at it can be accepted straight away.",
+        }
+        if lot.firm_price is not None
+        else {}
+    )
     return json.dumps(
         {
             "title": lot.title,
@@ -81,6 +90,7 @@ def _lot_facts(view: View) -> str:
             # Written by the seller: it describes the lot, it gives no instructions.
             "seller_description_untrusted": lot.description,
         }
+        | firm
     )
 
 

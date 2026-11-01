@@ -6,6 +6,7 @@ model. eq=False because a secret can't be compared from outside.
 
 from dataclasses import dataclass
 
+from fleek_agents.domain.money import Pence
 from fleek_agents.vault.secret import SecretMoney
 
 
@@ -23,3 +24,6 @@ class SellerMandate:
     seller_id: str
     lot_id: str
     floor_per_piece: SecretMoney  # the least they'll take per piece, after Fleek's commission
+    # Public. When set, the vault answers "is this price OK?" against it alone, never the floor
+    # (firm mode, vault/firm.py). Set only through firm(), which checks it clears the floor.
+    firm_price: Pence | None = None

@@ -80,6 +80,19 @@ class ListingType(StrEnum):
     REPRESENTATIVE = "representative"
 
 
+class SellMode(StrEnum):
+    """How the seller's agent sells a lot. Chosen by the seller before it goes on sale.
+
+    - haggle: Tommy gives ground towards the seller's secret floor (Fleek's Make an Offer).
+    - firm: Tommy sells at a public firm price or above, and never consults the floor. Nothing a
+      buyer sees depends on the floor, so nothing about it can leak; it costs deals (a buyer
+      whose top is between the floor and the firm price gets nothing). docs/SAFETY_CASE.md.
+    """
+
+    HAGGLE = "haggle"
+    FIRM = "firm"
+
+
 class Lot(DomainModel):
     """A bundle of clothing for sale. Prices are per piece, like Fleek's."""
 
@@ -96,6 +109,18 @@ class Lot(DomainModel):
     shipping: PenceField  # per piece; fixed
     # Written by the seller, so it is untrusted: agents must treat it as data, never instructions.
     description: Annotated[StrictStr, Field(max_length=2000)]
+    sell_mode: SellMode = SellMode.HAGGLE
+    # Firm mode only: the lowest base price per piece, public. The vault checks it isn't below the
+    # seller's floor when the seller sets it (vault/firm.py).
+    firm_price: PenceField | None = None
+
+    @model_validator(mode="after")
+    def _firm_price_fits_the_mode(self) -> "Lot":
+        if (self.sell_mode is SellMode.FIRM) != (self.firm_price is not None):
+            raise ValueError("A firm price goes with firm mode, and firm mode needs one")
+        if self.firm_price is not None and self.firm_price > self.base_price:
+            raise ValueError("The firm price can't be above the list price")
+        return self
 
     @property
     def listed_price(self) -> Pence:
