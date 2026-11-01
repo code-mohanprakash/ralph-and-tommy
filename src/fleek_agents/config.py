@@ -35,6 +35,9 @@ class NegotiationRules(BaseModel):
     answer_hours: Annotated[StrictInt, Field(ge=1)] = 48
     # After a negotiation ends without a deal, the same buyer waits this long to retry that lot.
     cooldown_hours: Annotated[StrictInt, Field(ge=0)] = 24
+    # Failed negotiations a buyer may have on one lot, ever (eBay's Best Offer allows 3 offers per
+    # buyer per item). Each try tells a buyer something about the floor, so tries are rationed.
+    tries_per_buyer_per_lot: Annotated[StrictInt, Field(ge=1)] = 3
 
 
 class ModelRouting(BaseModel):

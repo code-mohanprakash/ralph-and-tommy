@@ -11,7 +11,12 @@ from fleek_agents.domain.money import Pence
 from fleek_agents.domain.offers import Terms
 from fleek_agents.domain.state import Actor, IllegalMove, Move, NegotiationState
 from fleek_agents.orchestrator.clock import FakeClock
-from fleek_agents.orchestrator.opening import AlreadyNegotiating, CoolingDown, open_negotiation
+from fleek_agents.orchestrator.opening import (
+    AlreadyNegotiating,
+    CoolingDown,
+    NoTriesLeft,
+    open_negotiation,
+)
 from fleek_agents.orchestrator.rounds import BackwardsConcession, send_card
 from fleek_agents.store.db import Base, make_engine
 from fleek_agents.store.events import EventLog
@@ -79,6 +84,21 @@ def test_the_cooldown_is_per_buyer_and_lot(log: EventLog) -> None:
     open_negotiation(
         log, buyer_id="buyer-0002", lot_id="lot-0001", clock=clock, rules=RULES
     )  # other buyer
+
+
+def test_a_buyer_gets_three_failed_tries_per_lot_then_no_more(log: EventLog) -> None:
+    clock = FakeClock(T0)
+    for _ in range(3):
+        n = open_negotiation(
+            log, buyer_id="buyer-0666", lot_id="lot-0001", clock=clock, rules=RULES
+        )
+        log.append(n, Move.WALK_AWAY, by=A.BUYER_AGENT, at=clock.now())
+        clock.advance(timedelta(hours=RULES.cooldown_hours, minutes=1))
+    with pytest.raises(NoTriesLeft):
+        open_negotiation(log, buyer_id="buyer-0666", lot_id="lot-0001", clock=clock, rules=RULES)
+    # Only this buyer, only this lot.
+    open_negotiation(log, buyer_id="buyer-0666", lot_id="lot-0002", clock=clock, rules=RULES)
+    open_negotiation(log, buyer_id="buyer-0001", lot_id="lot-0001", clock=clock, rules=RULES)
 
 
 def test_losing_a_lot_to_someone_else_is_not_a_failed_probe(log: EventLog) -> None:
