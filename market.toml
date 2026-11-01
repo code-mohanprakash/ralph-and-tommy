@@ -68,7 +68,9 @@ noise_pct = 0
 # freely with different top prices, it pins a floor in about 12 questions. The gate rations it:
 # a budget of answers per lot per day (shared by every account), top prices rounded down to a
 # grid of grid_pct % of the delivered list price, and the same answer to a repeated question.
-# Measured with `fleek leak --route matching`. Off here for the same reason as [privacy].
+# Measured with `fleek leak --route matching`. A budget of 5 refused half of real buyers'
+# matches on the seeded market; 20 refuses about 1 question in 800. Off here for the same
+# reason as [privacy].
 on = false
-answers_per_lot_per_day = 5
+answers_per_lot_per_day = 20
 grid_pct = 5

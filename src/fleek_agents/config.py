@@ -114,7 +114,9 @@ class MatchGateRules(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     on: bool = False
-    answers_per_lot_per_day: Annotated[StrictInt, Field(ge=1)] = 5
+    # Measured: 5 a day refused half of real buyers' matches on the seeded market (many buyers
+    # ask about one lot). 20 refuses about 1 question in 800; the grid does the hiding.
+    answers_per_lot_per_day: Annotated[StrictInt, Field(ge=1)] = 20
     grid_pct: Annotated[StrictInt, Field(ge=1, le=20)] = 5  # top prices rounded down to this step
 
 
