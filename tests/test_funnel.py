@@ -1,14 +1,17 @@
 from collections.abc import Iterator
+from datetime import date
 
 import pytest
 from sqlalchemy.orm import Session
 
+from fleek_agents.config import MatchGateRules
 from fleek_agents.domain.money import Pence
 from fleek_agents.market.seed import generate_market
 from fleek_agents.matching.funnel import bundles_for, possible_deals
 from fleek_agents.store.db import Base, make_engine
 from fleek_agents.store.market import hard_filter, load_market
 from fleek_agents.vault.checks import deal_possible
+from fleek_agents.vault.gate import MatchGate
 from fleek_agents.vault.mandate import BuyerMandate
 from fleek_agents.vault.secret import SecretMoney
 from fleek_agents.vault.seed import generate_mandates
@@ -62,3 +65,21 @@ def test_the_funnel_cuts_negotiations_down(session: Session) -> None:
         possible += len(possible_deals(session, MARKET, SECRETS, want))
     assert 0 < possible < filtered
     print(f"\n{len(MARKET.wants) * len(MARKET.lots):,} pairs -> {filtered:,} -> {possible:,}")
+
+
+def test_through_the_gate_matching_only_ever_drops_lots_never_adds_them(session: Session) -> None:
+    gate = MatchGate(MatchGateRules(on=True, answers_per_lot_per_day=5, grid_pct=5))
+    day = date(2026, 11, 2)
+    kept_open = kept_gated = 0
+    for want in MARKET.wants[:100]:
+        open_ids = {c.lot.id for c in possible_deals(session, MARKET, SECRETS, want)}
+        gated = possible_deals(session, MARKET, SECRETS, want, gate=gate, today=day)
+        gated_ids = {c.lot.id for c in gated}
+        assert gated_ids <= open_ids  # rounding down never invents a match
+        kept_open, kept_gated = kept_open + len(open_ids), kept_gated + len(gated_ids)
+    assert 0 < kept_gated < kept_open  # it costs some matches, measured in fleek leak
+
+
+def test_the_gate_needs_to_know_the_day(session: Session) -> None:
+    with pytest.raises(ValueError, match="which day"):
+        possible_deals(session, MARKET, SECRETS, MARKET.wants[0], gate=MatchGate())
