@@ -92,6 +92,22 @@ class DigestRules(BaseModel):
     list_size: Annotated[StrictInt, Field(gt=0)] = 20
 
 
+class PrivacyRules(BaseModel):
+    """Hiding the seller's floor in Tommy's moves (docs/SAFETY_CASE.md). Off unless turned on.
+
+    - margin: each lot's floor is raised by a secret 0 to margin_max_pct %, drawn once per lot
+      from the vault's key. An attacker who pins "the floor" exactly has found floor + margin.
+    - noise: each counter Tommy sends moves by random noise of about noise_pct % of the list
+      price, shrinking to nothing by the last round, and never below the raised floor.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    on: bool = False
+    margin_max_pct: Annotated[StrictInt, Field(ge=0, le=20)] = 8  # chosen by the sweep (1 Nov)
+    noise_pct: Annotated[StrictInt, Field(ge=0, le=20)] = 0  # measured: noise never helped
+
+
 class Settings(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -101,6 +117,7 @@ class Settings(BaseModel):
     spending: Spending = Spending()
     approval: ApprovalRules = ApprovalRules()
     digest: DigestRules = DigestRules()
+    privacy: PrivacyRules = PrivacyRules()
 
 
 def load_settings(path: Path = Path("market.toml")) -> Settings:

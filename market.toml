@@ -49,3 +49,16 @@ first_deals_by_person = 3
 # A failed negotiation is a near miss if the last offer and counter ended this close (% of the counter).
 near_miss_gap_pct = 10
 list_size = 20
+
+[privacy]
+# Hides the seller's floor in Tommy's moves: a secret margin on each lot's floor (0 to
+# margin_max_pct %) and noise on his counters (about noise_pct % of list, shrinking each round).
+# Measured with `fleek leak --privacy` and `fleek leak --sweep`.
+# Off here because the recorded Claude runs (Deal Room, simulate, safety) were made without it,
+# and a replay only answers the exact requests it saw. The bench turns it on.
+# Chosen from the sweep (1 Nov): the only setting that met both marks set before measuring
+# (strongest attacker's hit rate cut by 40%+, fewer than 5 points of deals lost). Noise is 0:
+# measured, it never helped against an attacker who knows the code.
+on = false
+margin_max_pct = 8
+noise_pct = 0

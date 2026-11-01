@@ -59,6 +59,8 @@ uv run fleek digest --db fleek.db                               # the account ma
 uv run fleek summary neg-0001 --db fleek.db                     # what happened, and what to do
 uv run fleek bench                                              # 40 generated deals, scored with 95% intervals
 uv run fleek leak                                               # how close attackers get to Tommy's floor
+uv run fleek leak --privacy                                     # ...with the secret margin on
+uv run fleek leak --sweep                                       # every setting, and the trade-off chart
 ```
 
 To run Claude live, put an Anthropic key in `.env` (copy `.env.example`) and add `--live` to

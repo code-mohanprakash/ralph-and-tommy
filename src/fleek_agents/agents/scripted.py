@@ -5,6 +5,7 @@ They follow the same limits the AI agents will: they only learn about their limi
 """
 
 from datetime import timedelta
+from fractions import Fraction
 
 from fleek_agents.agents.base import Accept, Action, Send, View, WalkAway
 from fleek_agents.domain.bands import Band
@@ -54,6 +55,10 @@ class ScriptedRalph:
 class ScriptedTommy:
     """Starts at the list price, comes down a third of the gap each round, never past his floor."""
 
+    def share(self, rounds_left: int) -> Fraction:
+        """How much of the gap to the buyer's offer he gives up this round (exact, no floats)."""
+        return Fraction(1, 3)
+
     def decide(self, view: View) -> Action:
         offer = view.on_table
         if offer is None:
@@ -66,11 +71,21 @@ class ScriptedTommy:
         mine = view.my_last(Role.SELLER)
         if mine is None:
             return Send(terms=_terms(view, view.list_price))
-        step = _round5(
-            mine.base_price.value - (mine.base_price.value - offer.base_price.value) // 3
-        )
+        gap = mine.base_price.value - offer.base_price.value
+        step = _round5(mine.base_price.value - int(gap * self.share(view.rounds_left)))
         if band is Band.STRETCH and view.rounds_left <= 1:
             return Accept()
         if step < mine.base_price and view.band(step) in INSIDE:
             return Send(terms=_terms(view, step))
         return Send(terms=_terms(view, mine.base_price))  # hold
+
+
+class BoulwareTommy(ScriptedTommy):
+    """Gives little ground until the deadline (Faratin, Sierra & Jennings, 1998: "Boulware").
+
+    Each move a seller makes toward his floor says something about it. Holding firm early and
+    moving late means fewer, later clues: measured with `fleek leak --sweep`.
+    """
+
+    def share(self, rounds_left: int) -> Fraction:
+        return Fraction(1, 2) if rounds_left <= 1 else Fraction(1, 10)

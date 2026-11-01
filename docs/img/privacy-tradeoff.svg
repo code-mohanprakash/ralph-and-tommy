@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 460" font-family="Helvetica, Arial, sans-serif" font-size="12">
+<rect width="980" height="460" fill="white"/>
+<rect x="234" y="220" width="416" height="170" fill="#e6f4ea"/>
+<text x="644" y="382" text-anchor="end" fill="#1e7b34">passes both marks</text>
+<line x1="70" y1="390" x2="650" y2="390" stroke="#333"/>
+<line x1="70" y1="70" x2="70" y2="390" stroke="#333"/>
+<text x="360.0" y="435" text-anchor="middle">Deals closed, where a deal works (higher is better)</text>
+<text x="18" y="230.0" text-anchor="middle" transform="rotate(-90 18 230.0)">Strongest attacker within 2% of the floor (lower is better)</text>
+<text x="490.0" y="30" text-anchor="middle" font-size="15" font-weight="bold">Hiding Tommy's floor costs deals: every setting measured</text>
+<text x="680" y="70" font-weight="bold">Setting: attacker hit rate, deals closed</text>
+<text x="62" y="394" text-anchor="end">0%</text>
+<text x="62" y="348" text-anchor="end">10%</text>
+<text x="62" y="303" text-anchor="end">20%</text>
+<text x="62" y="257" text-anchor="end">30%</text>
+<text x="62" y="211" text-anchor="end">40%</text>
+<text x="62" y="165" text-anchor="end">50%</text>
+<text x="62" y="120" text-anchor="end">60%</text>
+<text x="62" y="74" text-anchor="end">70%</text>
+<text x="70" y="408" text-anchor="middle">90%</text>
+<text x="215" y="408" text-anchor="middle">92%</text>
+<text x="360" y="408" text-anchor="middle">94%</text>
+<text x="505" y="408" text-anchor="middle">96%</text>
+<text x="650" y="408" text-anchor="middle">98%</text>
+<circle cx="580.6" cy="106.6" r="7" fill="#1a73e8"/>
+<text x="580.6" y="110.6" text-anchor="middle" fill="white" font-size="10" font-weight="bold">1</text>
+<circle cx="688" cy="90" r="7" fill="#1a73e8"/>
+<text x="688" y="94" text-anchor="middle" fill="white" font-size="10" font-weight="bold">1</text>
+<text x="702" y="94">thirds, margin 0%, noise 0%: 62%, 97%</text>
+<circle cx="580.6" cy="134.0" r="7" fill="#1a73e8"/>
+<text x="580.6" y="138.0" text-anchor="middle" fill="white" font-size="10" font-weight="bold">2</text>
+<circle cx="688" cy="112" r="7" fill="#1a73e8"/>
+<text x="688" y="116" text-anchor="middle" fill="white" font-size="10" font-weight="bold">2</text>
+<text x="702" y="116">thirds, margin 0%, noise 4%: 56%, 97%</text>
+<circle cx="456.7" cy="156.9" r="7" fill="#1a73e8"/>
+<text x="456.7" y="160.9" text-anchor="middle" fill="white" font-size="10" font-weight="bold">3</text>
+<circle cx="688" cy="134" r="7" fill="#1a73e8"/>
+<text x="688" y="138" text-anchor="middle" fill="white" font-size="10" font-weight="bold">3</text>
+<text x="702" y="138">thirds, margin 4%, noise 0%: 51%, 95%</text>
+<circle cx="291.4" cy="220.9" r="11" fill="none" stroke="#1e7b34" stroke-width="2"/>
+<circle cx="291.4" cy="220.9" r="7" fill="#1a73e8"/>
+<text x="291.4" y="224.9" text-anchor="middle" fill="white" font-size="10" font-weight="bold">4</text>
+<circle cx="688" cy="156" r="7" fill="#1a73e8"/>
+<text x="688" y="160" text-anchor="middle" fill="white" font-size="10" font-weight="bold">4</text>
+<text x="702" y="160">thirds, margin 8%, noise 0%: 37%, 93%</text>
+<circle cx="291.4" cy="184.3" r="7" fill="#1a73e8"/>
+<text x="291.4" y="188.3" text-anchor="middle" fill="white" font-size="10" font-weight="bold">5</text>
+<circle cx="688" cy="178" r="7" fill="#1a73e8"/>
+<text x="688" y="182" text-anchor="middle" fill="white" font-size="10" font-weight="bold">5</text>
+<text x="702" y="182">thirds, margin 8%, noise 4%: 45%, 93%</text>
+<circle cx="498.0" cy="179.7" r="7" fill="#e8710a"/>
+<text x="498.0" y="183.7" text-anchor="middle" fill="white" font-size="10" font-weight="bold">6</text>
+<circle cx="688" cy="200" r="7" fill="#e8710a"/>
+<text x="688" y="204" text-anchor="middle" fill="white" font-size="10" font-weight="bold">6</text>
+<text x="702" y="204">boulware, margin 0%, noise 0%: 46%, 96%</text>
+<circle cx="332.7" cy="198.0" r="7" fill="#e8710a"/>
+<text x="332.7" y="202.0" text-anchor="middle" fill="white" font-size="10" font-weight="bold">7</text>
+<circle cx="688" cy="222" r="7" fill="#e8710a"/>
+<text x="688" y="226" text-anchor="middle" fill="white" font-size="10" font-weight="bold">7</text>
+<text x="702" y="226">boulware, margin 4%, noise 0%: 42%, 93%</text>
+<circle cx="291.4" cy="198.0" r="7" fill="#e8710a"/>
+<text x="291.4" y="202.0" text-anchor="middle" fill="white" font-size="10" font-weight="bold">8</text>
+<circle cx="688" cy="244" r="7" fill="#e8710a"/>
+<text x="688" y="248" text-anchor="middle" fill="white" font-size="10" font-weight="bold">8</text>
+<text x="702" y="248">boulware, margin 5%, noise 0%: 42%, 93%</text>
+<circle cx="208.8" cy="234.6" r="7" fill="#e8710a"/>
+<text x="208.8" y="238.6" text-anchor="middle" fill="white" font-size="10" font-weight="bold">9</text>
+<circle cx="688" cy="266" r="7" fill="#e8710a"/>
+<text x="688" y="270" text-anchor="middle" fill="white" font-size="10" font-weight="bold">9</text>
+<text x="702" y="270">boulware, margin 6%, noise 0%: 34%, 92%</text>
+</svg>
