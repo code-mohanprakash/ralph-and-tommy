@@ -98,6 +98,7 @@ To run Claude live, put an Anthropic key in `.env` (copy `.env.example`) and add
 
 | | |
 |---|---|
+| [How it works](docs/HOW_IT_WORKS.md) | One page per question: information flow, matching, getting to customers, scale, trade-offs, account managers, metrics, model evaluation, observability |
 | [Architecture](docs/ARCHITECTURE.md) | The pieces, who knows what, the life of one deal, the choices |
 | [Assumptions](docs/ASSUMPTIONS.md) | Who it's for, the Fleek facts it builds on, 12 assumptions |
 | [Results](docs/EVALS.md) | Scripted vs Claude Haiku 5.5 vs Claude Sonnet 5.5: deals, prices, cost |
