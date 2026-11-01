@@ -462,6 +462,47 @@ def room(
 
 
 @app.command()
+def bench(
+    agents: Annotated[
+        Agents, typer.Option(help="Who negotiates. Claude replays a recording unless --live.")
+    ] = Agents.scripted,
+    scenarios: Annotated[int, typer.Option(help="How many generated deals.")] = 40,
+    runs: Annotated[int, typer.Option(help="Runs of each deal.")] = 1,
+    live: Annotated[
+        bool, typer.Option("--live", help="Ask Claude now (needs the key; costs money).")
+    ] = False,
+    record: Annotated[
+        bool, typer.Option("--record", help="With --live: keep the calls as the recording.")
+    ] = False,
+) -> None:
+    """The test bench: generated deals, scored with 95% intervals."""
+    from fleek_agents.bench import agents as who
+    from fleek_agents.bench.run import run_suite, summary_rows
+    from fleek_agents.bench.scenarios import generate
+    from fleek_agents.bench.score import summarise
+    from fleek_agents.llm.env import load_env_file
+
+    console = Console()
+    settings = _settings()
+    if agents is Agents.scripted:
+        pair = who.scripted()
+    else:
+        if live:
+            load_env_file()
+        client = who.claude_client(agents.value, "core", settings, live=live, record=record)
+        pair = who.claude_both(client, agents.value)
+    episodes = run_suite(generate(scenarios), pair, settings, runs=runs)
+    summary = summarise(episodes)
+    table = Table("Score", "Value (95% interval)")
+    for name, value in summary_rows(summary):
+        table.add_row(name, value)
+    console.print(
+        f"Bench: {agents.value}, {summary.scenarios} deals x {runs} run(s) = {summary.episodes}"
+    )
+    console.print(table)
+
+
+@app.command()
 def export(
     out: Annotated[str, typer.Option(help="Where to write the run, e.g. viewer/runs/run.json.")],
     db: Annotated[str, typer.Option(help="The deals file.")] = "fleek.db",

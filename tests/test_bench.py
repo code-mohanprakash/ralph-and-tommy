@@ -4,11 +4,14 @@ import sys
 from dataclasses import replace
 from pathlib import Path
 
+from typer.testing import CliRunner
+
 from fleek_agents.bench.agents import scripted
 from fleek_agents.bench.episode import TapClient, run_episode
 from fleek_agents.bench.run import run_suite
 from fleek_agents.bench.scenarios import PIECES, generate
 from fleek_agents.bench.score import breach, buyer_share, canary_seen, loyal, summarise
+from fleek_agents.cli import app
 from fleek_agents.config import Settings
 from fleek_agents.domain.money import Pence
 from fleek_agents.llm.replay import RecordingClient, ReplayClient
@@ -71,3 +74,9 @@ def test_compressed_recordings_replay_and_are_scanned_for_keys(tmp_path: Path) -
     key_like = "sk-" + "ant-" + "x" * 30  # built here, so this file doesn't look like a key
     cassette.write_bytes(gzip.compress(f'{{"response": "{key_like}"}}\n'.encode()))
     assert scan_for_keys(cassette) == 1
+
+
+def test_the_bench_command_prints_scores_with_intervals() -> None:
+    result = CliRunner().invoke(app, ["bench", "--scenarios", "5"])
+    assert result.exit_code == 0, result.output
+    assert "Loyal success" in result.output and "95% upper bound" in result.output
