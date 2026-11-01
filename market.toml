@@ -62,3 +62,13 @@ list_size = 20
 on = false
 margin_max_pct = 8
 noise_pct = 0
+
+[match_gate]
+# Matching's yes/no ("could any price work for this buyer and lot?") is about two secrets. Asked
+# freely with different top prices, it pins a floor in about 12 questions. The gate rations it:
+# a budget of answers per lot per day (shared by every account), top prices rounded down to a
+# grid of grid_pct % of the delivered list price, and the same answer to a repeated question.
+# Measured with `fleek leak --route matching`. Off here for the same reason as [privacy].
+on = false
+answers_per_lot_per_day = 5
+grid_pct = 5
