@@ -15,6 +15,11 @@ so the defences are theirs:
 - Refusals that give nothing away: once a lot's budget is spent, a new question gets "no match"
   whatever the truth, so the refusal itself can't be read (it doesn't depend on the floor).
 - With the privacy layer on, the check uses the floor plus the lot's secret margin.
+
+It also notices a crowd: many accounts on one day that each asked about this lot and nothing
+else. Real buyers' searches touch every lot that fits what they want; an attacker's fresh
+accounts each ask one question about one lot. `crowded_lots` names those lots (no secret in
+it), so a person can look and the lot's deals go to an account manager.
 """
 
 from dataclasses import dataclass, field
@@ -36,6 +41,7 @@ class MatchGate:
     _answers: dict[tuple[str, int], bool] = field(default_factory=dict)  # (lot, step): answer
     _spent: dict[tuple[str, date], int] = field(default_factory=dict)  # (lot, day): answers
     refused: int = 0  # questions turned away because the budget was spent
+    _asked: dict[tuple[str, date], set[str]] = field(default_factory=dict)  # (buyer, day): lots
 
     def step(self, quote: Quote) -> int:
         """The size of one grid step for this lot, in pence per piece delivered."""
@@ -46,6 +52,7 @@ class MatchGate:
         self, buyer: BuyerMandate, seller: SellerMandate, quote: Quote, *, today: date
     ) -> bool:
         """deal_possible, through the gate."""
+        self._asked.setdefault((buyer.buyer_id, today), set()).add(seller.lot_id)
         size = self.step(quote)
         rounded = buyer.max_per_piece.reveal().value // size * size
         key = (seller.lot_id, rounded)
@@ -62,3 +69,12 @@ class MatchGate:
         answer = deal_possible(coarse, guarded(seller, self.privacy), quote)
         self._answers[key] = answer
         return answer
+
+    def crowded_lots(self, today: date, *, accounts: int) -> dict[str, int]:
+        """Lots that `accounts` or more accounts asked about today, and about nothing else."""
+        single: dict[str, int] = {}
+        for (_buyer, day), lots in self._asked.items():
+            if day == today and len(lots) == 1:
+                (lot_id,) = lots
+                single[lot_id] = single.get(lot_id, 0) + 1
+        return {lot_id: n for lot_id, n in single.items() if n >= accounts}
