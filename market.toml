@@ -85,3 +85,12 @@ grid_pct = 5
 # real buyers' searches touch every lot that fits; an attacker's fresh accounts ask about one.
 # Measured with `fleek monitors`: what it catches, and how often it fires on real buyers.
 crowd_accounts = 5
+
+[matching]
+# How the lots that could work are ranked, in points. Public facts only: how well the lot fits the
+# buyer's words, its delivered price against the other candidates, the seller's rating (out of 5)
+# and dispatch days. The vault has already said which lots could work; ranking never reads a limit.
+fit = 50
+price = 25
+quality = 15
+speed = 10

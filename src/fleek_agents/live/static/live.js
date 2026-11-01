@@ -12,6 +12,7 @@ let step = 1;
 let lotCount = 0;
 let playing = false;
 let last = null;
+let showFiltered = false;
 
 async function api(path, body) {
   const res = await fetch(path, body === undefined ? {} : {
@@ -134,6 +135,7 @@ function collect() {
       top_price: pence(f.buyer_top.value), final_say: $('[name="buyer_final_say"]:checked').value,
     },
     agents: $('[name="agents"]:checked').value,
+    others: options.preset.others,
   };
 }
 
@@ -242,6 +244,57 @@ function renderScreen(root, data, view, side) {
   $$("button", controls).forEach((b) => { if (!live) b.disabled = true; });
 }
 
+function renderFunnel(root, view) {
+  const fu = view.fleek.funnel;
+  if (!fu || !fu.rows) return;
+  const ranked = fu.rows.filter((r) => r.step === "ranked").length;
+  $('[data-field="funnel-steps"]', root).replaceChildren(
+    el("li", { text: `${fu.lots} lots from ${fu.sellers} sellers` }),
+    el("li", { text: `${fu.passed} pass the filters` }),
+    el("li", { text: `${fu.possible} the vault says a price can work` }),
+    el("li", { text: `${ranked} ranked` }));
+  const current = view.lot ? view.lot.id : null;
+  const filtered = fu.rows.filter((r) => r.step === "filters").length;
+  const toggle = el("tr", { class: "toggle" }, el("td", { colspan: "4" },
+    el("button", {
+      class: "link", type: "button",
+      text: showFiltered ? `Hide the ${filtered} lots the filters dropped` : `Show the ${filtered} lots the filters dropped`,
+      onclick: () => { showFiltered = !showFiltered; renderFunnel(root, view); },
+    })));
+  const rows = fu.rows.filter((r) => r.step !== "filters" || showFiltered);
+  $('[data-field="funnel-rows"]', root).replaceChildren(...rows.map((r) => {
+    let result, why;
+    if (r.step === "ranked") {
+      result = `#${r.rank}`;
+      why = `score ${r.total} = fit ${r.fit}, price ${r.price} (${r.delivered} delivered), rating ${r.quality}/5, dispatch ${r.dispatch_days} days`;
+    } else if (r.step === "vault") {
+      result = "no price"; why = r.why;
+    } else {
+      result = "filtered"; why = r.why;
+    }
+    const row = el("tr", { class: `${r.step}${r.lot === current ? " current" : ""}` },
+      el("td", { text: r.lot === current ? `${result} ◀ now` : result }),
+      el("td", { text: r.title }), el("td", { text: r.seller }), el("td", { text: why }));
+    return row;
+  }), ...(filtered ? [toggle] : []));
+  const w = fu.weights;
+  $('[data-field="weights"]', root).textContent =
+    `Ranking uses public facts only, weighted fit ${w.fit}, price ${w.price}, seller rating ${w.quality}, dispatch ${w.speed} (market.toml). The vault's yes or no is the only part that touches a secret, and it never gives a number.`;
+}
+
+function renderMetrics(root, m) {
+  const t = m.totals;
+  const pairs = [
+    ["Agent turns", t.agent_turns], ["Model calls", t.model_calls],
+    ["Tokens in / out", `${t.tokens_in} / ${t.tokens_out}`], ["AI cost", `${t.cost_cents}¢`],
+    ["Agent time", `${t.wall_seconds}s`], ["Lots tried", t.lots_tried], ["Cards", t.cards],
+    ["Simulated time", `${t.simulated_hours}h`], ["Deal price", t.price_vs_list || "–"],
+    ["Vault stops", t.vault_stops],
+  ];
+  $('[data-field="metrics"]', root).replaceChildren(...pairs.flatMap(([k, v]) =>
+    [el("dt", { text: k }), el("dd", { text: String(v) })]));
+}
+
 function render(view) {
   last = view;
   $("#agents-label").textContent = view.agents;
@@ -250,9 +303,8 @@ function render(view) {
   renderScreen($("#buyer-screen"), view.buyer, view, "buyer");
   renderScreen($("#seller-screen"), view.seller, view, "seller");
   const f = $("#fleek-screen");
-  $('[data-field="matching"]', f).replaceChildren(...view.fleek.matching.map((m) => el("li", {
-    text: `${m.title}: ${m.passed_filters ? (m.possible ? "fits, and a price can work" : "fits, but no price can work") : "doesn't fit what the buyer wants"}`,
-  })));
+  renderFunnel(f, view);
+  renderMetrics(f, view.fleek.metrics);
   $('[data-field="lines"]', f).replaceChildren(...view.fleek.lines.map((l) => lineItem(l, "")));
   $('[data-field="watch"]', f).replaceChildren(...(view.fleek.watch.length
     ? view.fleek.watch.map((w) => el("li", { text: `${w.buyer}: ${w.why}` }))
@@ -331,6 +383,10 @@ async function init() {
   pick.append(el("option", { value: "own", text: "My own (type below)" }));
   pick.addEventListener("change", () => { if (pick.value !== "own") fillBuyer(options.buyers[Number(pick.value)]); });
   fill(options.preset);
+  const others = options.preset.others || [];
+  $("#others-note").textContent = others.length
+    ? `Also on Fleek today: ${others.map((s) => `${s.name} (${s.stock.length} lots, rated ${s.quality_score})`).join(", ")}. Matching chooses across every seller.`
+    : "";
   $("#add-lot").addEventListener("click", () => addLot());
   $("#use-preset").addEventListener("click", () => fill(options.preset));
   $("#next").addEventListener("click", () => { if (stepValid()) showStep(step + 1); });

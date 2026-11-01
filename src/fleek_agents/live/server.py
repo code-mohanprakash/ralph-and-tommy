@@ -27,6 +27,7 @@ from fleek_agents.domain.state import IllegalMove
 from fleek_agents.live.forms import BUYERS, PRESET, FormError, Setup
 from fleek_agents.live.session import AgentPair, LiveSession
 from fleek_agents.llm.replay import CassetteMiss
+from fleek_agents.matching.embeddings import Embedder
 from fleek_agents.orchestrator.opening import NoTriesLeft
 
 STATIC = Path(__file__).parent / "static"
@@ -45,8 +46,10 @@ class Desk:
         self,
         settings: Settings,
         pairs: dict[str, tuple[Callable[[], AgentPair], str]],
+        *,
+        embedder: Embedder | None = None,
     ) -> None:
-        self.settings, self.pairs = settings, pairs
+        self.settings, self.pairs, self.embedder = settings, pairs, embedder
         self.live: LiveSession | None = None
         self._lock = threading.Lock()
 
@@ -69,10 +72,14 @@ class Desk:
         make, label = self.pairs[setup.agents]
         with self._lock:
             try:
-                self.live = LiveSession(setup, self.settings, make(), label)
+                self.live = LiveSession(setup, self.settings, make(), label, embedder=self.embedder)
             except FormError as error:
                 raise BadRequest(str(error)) from None
             return self.live.view()
+
+    def trace(self) -> dict[str, Any]:
+        with self._lock:
+            return self._session().trace() if self.live else {"error": "No session yet."}
 
     def _session(self) -> LiveSession:
         if self.live is None:
@@ -137,6 +144,9 @@ def make_handler(desk: Desk) -> type[BaseHTTPRequestHandler]:
                 return
             if path == "/api/state":
                 self._json(HTTPStatus.OK, desk.state())
+                return
+            if path == "/api/trace":
+                self._json(HTTPStatus.OK, desk.trace())
                 return
             name = "live.html" if path == "/" else path.removeprefix("/static/")
             file = STATIC / Path(name).name

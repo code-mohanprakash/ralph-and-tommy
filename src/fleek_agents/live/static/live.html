@@ -44,6 +44,7 @@
           <label><input type="radio" name="seller_final_say" value="person"> Ask me before every deal</label>
         </div>
         <h2>Your stock</h2>
+        <p class="muted small" id="others-note"></p>
         <div id="stock"></div>
         <button type="button" id="add-lot">+ Add another lot</button>
       </fieldset>
@@ -134,11 +135,21 @@
     </div>
     <article class="fleek" id="fleek-screen" aria-label="Fleek's view">
       <header><h2>Fleek</h2><span class="muted small">matching, the referee, account managers</span></header>
+      <section class="funnel" aria-label="Matching">
+        <h3>Matching: how this buyer was matched</h3>
+        <ol class="steps-row" data-field="funnel-steps"></ol>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Result</th><th>Lot</th><th>Seller</th><th>Why</th></tr></thead>
+          <tbody data-field="funnel-rows"></tbody>
+        </table></div>
+        <p class="muted small" data-field="weights"></p>
+      </section>
       <div class="fleek-body">
-        <div><h3>Matching</h3><ul data-field="matching"></ul></div>
         <div><h3>Referee and account manager</h3><ol class="timeline compact" data-field="lines"></ol>
           <div class="ask" data-field="ask" hidden></div></div>
         <div><h3>Watch list</h3><ul data-field="watch"></ul></div>
+        <div><h3>Metrics</h3><dl class="metrics" data-field="metrics"></dl>
+          <a href="/api/trace" download="ralph-and-tommy-trace.json" class="small">Download the trace (JSON, no secrets)</a></div>
       </div>
     </article>
   </section>

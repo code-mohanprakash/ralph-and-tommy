@@ -56,6 +56,8 @@ class SellerForm(_Form):
     name: Words
     country: Annotated[str, Field(pattern=r"^[A-Z]{2}$")] = "PK"
     final_say: FinalSay = FinalSay.AGENT
+    quality_score: Annotated[float, Field(ge=0, le=5)] = 4.5  # public rating on Fleek
+    dispatch_days: Annotated[StrictInt, Field(ge=0, le=30)] = 2
     stock: Annotated[tuple[StockLine, ...], Field(min_length=1, max_length=20)]
 
 
@@ -76,6 +78,8 @@ class Setup(_Form):
     seller: SellerForm
     buyer: BuyerForm
     agents: Literal["scripted", "claude"] = "scripted"
+    # The rest of the market: other sellers on Fleek today, so matching chooses across sellers.
+    others: tuple[SellerForm, ...] = ()
 
 
 MONEY = re.compile(r"£\s*\d|\d+\s*(p|pence|gbp|pounds?)\b|\b\d+\.\d{2}\b", re.IGNORECASE)
@@ -111,6 +115,141 @@ def check_free_text(setup: Setup) -> None:
                 )
 
 
+# Other sellers on Fleek today, fixed for the demo: matching chooses across all of them.
+OTHERS: list[dict[str, Any]] = [
+    {
+        "name": "Lahore Denim House",
+        "country": "PK",
+        "final_say": "agent",
+        "quality_score": 3.8,
+        "dispatch_days": 5,
+        "stock": [
+            {
+                "title": "Levi's 501 jeans, grade B, 50 pairs",
+                "brand": "Levi's",
+                "category": "jeans",
+                "grade": "B",
+                "pieces": 50,
+                "bundles": 3,
+                "list_price": 1100,
+                "shipping": 300,
+                "description": "Mixed washes, some wear on hems.",
+                "floor": 750,
+                "mode": "haggle",
+            },
+            {
+                "title": "Nike sweatshirts, grade A, 30 pieces",
+                "brand": "Nike",
+                "category": "sweatshirts",
+                "grade": "A",
+                "pieces": 30,
+                "bundles": 2,
+                "list_price": 850,
+                "shipping": 250,
+                "description": "Plain and small-logo crewnecks.",
+                "floor": 580,
+                "mode": "haggle",
+            },
+            {
+                "title": "Mixed denim jackets, grade B, 25 pieces",
+                "brand": "Mixed",
+                "category": "jackets",
+                "grade": "B",
+                "pieces": 25,
+                "bundles": 2,
+                "list_price": 1500,
+                "shipping": 400,
+                "description": "Trucker and chore jackets.",
+                "floor": 1000,
+                "mode": "haggle",
+            },
+        ],
+    },
+    {
+        "name": "Delhi Vintage Exports",
+        "country": "IN",
+        "final_say": "agent",
+        "quality_score": 4.3,
+        "dispatch_days": 4,
+        "stock": [
+            {
+                "title": "Levi's 501 jeans, grade A, 50 pairs",
+                "brand": "Levi's",
+                "category": "jeans",
+                "grade": "A",
+                "pieces": 50,
+                "bundles": 2,
+                "list_price": 1350,
+                "shipping": 320,
+                "description": "Sorted and steamed.",
+                "floor": 1200,
+                "mode": "haggle",
+            },
+            {
+                "title": "The North Face fleeces, grade A, 20 pieces",
+                "brand": "The North Face",
+                "category": "fleeces",
+                "grade": "A",
+                "pieces": 20,
+                "bundles": 2,
+                "list_price": 1700,
+                "shipping": 380,
+                "description": "Mostly black and navy.",
+                "floor": 1300,
+                "mode": "haggle",
+            },
+            {
+                "title": "Champion hoodies, grade AB, 30 pieces",
+                "brand": "Champion",
+                "category": "hoodies",
+                "grade": "AB",
+                "pieces": 30,
+                "bundles": 2,
+                "list_price": 1100,
+                "shipping": 260,
+                "description": "Reverse weave, some fading.",
+                "floor": 700,
+                "mode": "haggle",
+            },
+        ],
+    },
+    {
+        "name": "Rotterdam Rag House",
+        "country": "NL",
+        "final_say": "agent",
+        "quality_score": 4.7,
+        "dispatch_days": 1,
+        "stock": [
+            {
+                "title": "Levi's 501 jeans, grade A, 100 pairs",
+                "brand": "Levi's",
+                "category": "jeans",
+                "grade": "A",
+                "pieces": 100,
+                "bundles": 1,
+                "list_price": 1550,
+                "shipping": 250,
+                "description": "Premium sort, EU sizes noted.",
+                "floor": 1250,
+                "mode": "haggle",
+            },
+            {
+                "title": "Adidas sweatshirts, grade A, 30 pieces",
+                "brand": "Adidas",
+                "category": "sweatshirts",
+                "grade": "A",
+                "pieces": 30,
+                "bundles": 2,
+                "list_price": 1050,
+                "shipping": 200,
+                "description": "Trefoil and spellout, 80s-00s.",
+                "floor": 760,
+                "mode": "haggle",
+            },
+        ],
+    },
+]
+
 # The ready-made market: one button fills it in, and the first buyer is the one Claude was
 # recorded on. Ten lots, so matching has real work: filters, the vault's yes/no, ranking.
 BUYERS: list[dict[str, Any]] = [
@@ -122,7 +261,7 @@ BUYERS: list[dict[str, Any]] = [
         "brands": ["Levi's"],
         "grades": ["A", "B"],
         "pieces": 100,
-        "notes": "Levi's 501s for my shop: good condition, mixed sizes.",
+        "notes": "Levi's 501 jeans, grade A, for my shop: good condition, mixed sizes.",
         "top_price": 1550,
         "final_say": "person",
     },
@@ -297,4 +436,5 @@ PRESET: dict[str, Any] = {
     },
     "buyer": BUYERS[0],
     "agents": "scripted",
+    "others": OTHERS,
 }

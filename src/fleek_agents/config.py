@@ -127,6 +127,28 @@ class MatchGateRules(BaseModel):
     crowd_accounts: Annotated[StrictInt, Field(ge=2)] = 5
 
 
+class MatchingWeights(BaseModel):
+    """How much each public fact counts when ranking the lots that could work (whole points).
+
+    Only public facts: how well the lot fits the buyer's words, its delivered price against the
+    other candidates, the seller's rating and dispatch time. Never a secret: the vault has already
+    said which lots could work, and ranking must not reveal more.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    fit: Annotated[StrictInt, Field(ge=0)] = 50
+    price: Annotated[StrictInt, Field(ge=0)] = 25
+    quality: Annotated[StrictInt, Field(ge=0)] = 15
+    speed: Annotated[StrictInt, Field(ge=0)] = 10
+
+    @model_validator(mode="after")
+    def _some_weight(self) -> Self:
+        if self.fit + self.price + self.quality + self.speed == 0:
+            raise ValueError("At least one matching weight must be above 0")
+        return self
+
+
 class Settings(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -138,6 +160,7 @@ class Settings(BaseModel):
     digest: DigestRules = DigestRules()
     privacy: PrivacyRules = PrivacyRules()
     match_gate: MatchGateRules = MatchGateRules()
+    matching: MatchingWeights = MatchingWeights()
 
 
 def load_settings(path: Path = Path("market.toml")) -> Settings:
