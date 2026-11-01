@@ -77,3 +77,9 @@ name = "What account managers read never imports the vault, so it can't show a s
 type = "forbidden"
 source_modules = ["fleek_agents.humans"]
 forbidden_modules = ["fleek_agents.vault"]
+
+[[tool.importlinter.contracts]]
+name = "Approval never imports the vault, so who must say yes can't depend on a secret limit"
+type = "forbidden"
+source_modules = ["fleek_agents.orchestrator.approval"]
+forbidden_modules = ["fleek_agents.vault"]

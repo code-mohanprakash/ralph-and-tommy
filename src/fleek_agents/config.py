@@ -84,6 +84,8 @@ class ApprovalRules(BaseModel):
 
     person_at_or_above_pence: Annotated[StrictInt, Field(gt=0)] = 150_000  # £1,500
     first_deals_by_person: Annotated[StrictInt, Field(ge=0)] = 3
+    # A price this far below the list price (as a % of list) is unusual enough for a second look.
+    unusual_below_pct: Annotated[StrictInt, Field(gt=0, le=100)] = 60
 
 
 class DigestRules(BaseModel):

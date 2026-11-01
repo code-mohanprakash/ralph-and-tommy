@@ -132,11 +132,25 @@ class Lot(DomainModel):
 # floor live only in the vault, so these models can be shown to an agent safely.
 
 
+class FinalSay(StrEnum):
+    """Who says the final yes to a deal the agents agreed. Set by each side, before negotiating.
+
+    - agent: the deal closes inside the limits, unless Fleek's own rules ask a person.
+    - person: every agreed deal waits for this side's own OK (Google's AP2 calls this "human
+      present"). It's asked after agreement, for every deal, whatever the price, so the wait can't
+      tell the other side anything about a limit.
+    """
+
+    AGENT = "agent"
+    PERSON = "person"
+
+
 class Buyer(DomainModel):
     id: BuyerId
     name: Text
     kind: BuyerKind
     country: CountryCode
+    final_say: FinalSay = FinalSay.AGENT
 
 
 class BulkTier(DomainModel):
@@ -173,6 +187,7 @@ class Seller(DomainModel):
     quality_score: Annotated[float, Field(ge=0, le=5)]  # public on Fleek, out of 5
     dispatch_days: Annotated[StrictInt, Field(ge=0)]  # usual days to hand over an order
     bulk_rules: BulkRules = BulkRules()
+    final_say: FinalSay = FinalSay.AGENT
 
 
 class Want(DomainModel):

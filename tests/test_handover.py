@@ -64,7 +64,10 @@ def test_the_approval_summary_says_what_is_at_stake(settings: Settings) -> None:
     )
     h = run.handover
     assert h is not None
-    assert h.why == "An agreed deal waits for your OK: £1,500 or more."
+    assert (
+        h.why
+        == "An agreed deal waits for your OK: £1,500 or more; one of the buyer's first 3 deals."
+    )
     assert h.at_stake == Pence(304000)
     assert "£12.10 a piece for 200 pieces" in h.stands
     assert h.happened[-1] == "Tommy accepted"
@@ -133,8 +136,8 @@ def test_fleek_summary_prints_the_summary_from_a_deals_file(
     )
     result = runner.invoke(app, ["summary", "neg-0001", "--db", db])
     assert result.exit_code == 0, result.output
-    assert (
-        "Why you're seeing this: An agreed deal waits for your OK: £1,500 or more." in result.output
+    assert "Why you're seeing this: An agreed deal waits for your OK: £1,500 or more;" in " ".join(
+        result.output.split()
     )
     assert "1. Ralph offered £5.60 a piece" in result.output
     missing = runner.invoke(app, ["summary", "neg-0099", "--db", db])
