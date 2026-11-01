@@ -1,9 +1,15 @@
+import os
+
 import pytest
 
 from fleek_agents.agents.scripted import BoulwareTommy, ScriptedRalph, ScriptedTommy
 from fleek_agents.bench.episode import TapClient
 from fleek_agents.bench.moves import (
+    ATTACKER_KEY,
+    attacker_scenarios,
+    likelihood,
     probe_sessions,
+    train_learned,
 )
 from fleek_agents.bench.run import run_suite
 from fleek_agents.bench.scenarios import PIECES, Scenario, generate
@@ -111,3 +117,29 @@ def test_boulware_tommy_holds_firmer_early_and_never_passes_his_floor() -> None:
             firmer += holder.counters[1] > thirds.counters[1]
         assert all(c >= s.truth.seller_min for c in holder.counters)
     assert firmer > 10
+
+
+def test_the_attackers_noise_model_matches_the_harness() -> None:
+    # If the Bayesian attacker's model of the noise were wrong, it would rule out the floor
+    # Tommy really works to, and every "with the layer on" number would be meaningless.
+    for s in generate(25):
+        worked_to = floor_of(guarded(s.seller_limit, ON))
+        visits = probe_sessions(s, lambda _s: (ScriptedTommy(), []), NOISY, 3)
+        assert all(likelihood(v, worked_to, NOISY) > 0 for v in visits), s.key
+
+
+def test_the_learned_attacker_trains_with_its_own_key_and_puts_ours_back(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("FLEEK_VAULT_KEY", "our-key")
+    seen: list[str | None] = []
+    original = guarded
+
+    def spy(limit: SellerMandate, rules: PrivacyRules) -> SellerMandate:
+        seen.append(os.environ.get("FLEEK_VAULT_KEY"))
+        return original(limit, rules)
+
+    monkeypatch.setattr("fleek_agents.orchestrator.run.guarded", spy)
+    train_learned(attacker_scenarios(3), lambda _s: (ScriptedTommy(), []), NOISY)
+    assert seen and set(seen) == {ATTACKER_KEY}
+    assert os.environ["FLEEK_VAULT_KEY"] == "our-key"

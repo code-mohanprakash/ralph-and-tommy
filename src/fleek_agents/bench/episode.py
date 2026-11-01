@@ -8,7 +8,7 @@ prompt or came out of the model, it shows up there.
 import json
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from anthropic.types.beta import BetaMessage
@@ -83,7 +83,8 @@ def run_episode(
     engine = make_engine("sqlite://")
     Base.metadata.create_all(engine)
     with Session(engine) as session:
-        log, clock = EventLog(session), FakeClock(START)
+        # Each run starts a day later, as a repeat visit would after the cooldown.
+        log, clock = EventLog(session), FakeClock(START + timedelta(days=run))
         put_on_sale(session, scenario.lot.id, bundles=1)
         nid = open_negotiation(
             log,
