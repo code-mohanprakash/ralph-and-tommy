@@ -23,6 +23,7 @@ class NegotiationState(StrEnum):
     LOST_TO_OTHER_BUYER = "lost_to_other_buyer"
     NO_DEAL_POSSIBLE = "no_deal_possible"
     NEEDS_HUMAN = "needs_human"
+    STOPPED = "stopped"  # the buyer or the seller stopped it themselves
 
 
 class Move(StrEnum):
@@ -37,6 +38,7 @@ class Move(StrEnum):
     ESCALATE = "escalate"  # hand to a person: model refusal, spend cap, repeated bad output
     APPROVE = "approve"  # by a person, or by the auto rule for small deals
     REJECT = "reject"
+    STOP = "stop"  # the buyer or the seller ends it themselves, at any point before agreement
 
 
 class Actor(StrEnum):
@@ -66,6 +68,9 @@ ALLOWED: Mapping[tuple[NegotiationState, Move], tuple[NegotiationState, frozense
     (S.COUNTERED, M.WALK_AWAY): (S.WALKED_AWAY, frozenset({A.BUYER_AGENT})),
     **{(state, M.LOSE_LOT): (S.LOST_TO_OTHER_BUYER, frozenset({A.SYSTEM})) for state in LIVE},
     **{(state, M.ESCALATE): (S.NEEDS_HUMAN, frozenset({A.SYSTEM})) for state in LIVE},
+    # A person can always stop their own agent. Unlike an agent walking away, this is allowed
+    # with their own card on the table: the person, not the agent, decides to end it.
+    **{(state, M.STOP): (S.STOPPED, frozenset({A.HUMAN})) for state in LIVE},
     **{
         (state, M.EXPIRE): (S.EXPIRED, frozenset({A.SYSTEM}))
         for state in (*LIVE, S.PENDING_APPROVAL)

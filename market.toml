@@ -13,6 +13,9 @@ max_rounds = 6
 answer_hours = 48
 # After a negotiation ends without a deal, the same buyer waits this long before retrying that lot.
 cooldown_hours = 24
+# Failed negotiations one buyer may have on one lot, ever (eBay Best Offer: 3 offers per buyer
+# per item). Each try tells a buyer something about the floor.
+tries_per_buyer_per_lot = 3
 
 [models]
 # Deals worth this much or more (whole pence) get the stronger model.

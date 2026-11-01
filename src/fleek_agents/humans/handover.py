@@ -52,6 +52,10 @@ STOPPED = {
         "{agent}'s AI kept giving answers the rules don't allow.",
         "Read the last cards and finish the negotiation by hand, or close it.",
     ),
+    EscalationReason.ASKED_FOR_A_PERSON: (
+        "The {side} asked for an account manager to take over.",
+        "Call the {side}: find out what they want changed, then finish the negotiation by hand.",
+    ),
     EscalationReason.SPEND_CAP: (
         "The AI spending limit for this negotiation was reached.",
         "Finish it by hand, or close it. If this happens often, look at the cap in market.toml.",
