@@ -150,14 +150,41 @@ ordered by what each needs, so each one builds only on merged work. The result i
   the lowest price his floor allows. The vault refused, the card was never sent, and the account manager got a summary
   saying to call the seller. The scripted agents ended the same numbers as a near miss.
 
+## Modes, people and the live demo (Sunday night)
+
+**How it was planned.** I asked for literal zero leaks. Claude worked out what that would cost
+before building anything: if Tommy's lowest price can't depend on the floor, it has to sit above
+every floor he might have, which kept about half the deals on 1,000 generated lots. Then I asked
+which modes buyers and sellers should get, and to research how Fleek makes money first. Four
+research agents read Fleek's help centre, marketplaces' offer settings (eBay, Depop, Vinted,
+Vestiaire, StockX, Faire, Alibaba), negotiating-agent products (Pactum, Nibble, Google AP2) and the
+economics papers. The finding that shaped the plan: Fleek earns 15% of every delivered order, so
+zero leaks became a mode the seller picks (firm price), not the default.
+
+**Mistakes in this round, and how each was caught:**
+
+| Mistake | Caught by |
+|---|---|
+| The research report said shrinking noise hides a floor well, citing a 2026 paper | Checking it against this repo's own measurement (noise never helped against an attacker who knows the code); the report was corrected |
+| New tests for the walk-away offer were written over `tests/test_offers.py`, deleting the 10 offer-card tests | Reading the branch's diff stat (114 lines deleted from a file meant to be new); restored, and the new tests moved to their own file |
+| A Claude test for firm mode picked a lot the buyer couldn't afford | The test failing on "agreed"; the test now picks a lot inside both limits |
+| A helper function took the `@app.command()` meant for `fleek leak` | Running the command (typer refused the helper's arguments) |
+| The live page set `disabled="null"` on buttons, which disables them | Reading the page code before the browser check |
+| A canary check on the live recording searched hashed request ids, which can't show anything | Reading what the recording stores; replaced by a replay through a tap that sees every request |
+| Turning the protections on in `market.toml` broke 12 tests, most of them the bench's baselines | Running the whole suite; the protections are on in `fleek live` instead, and the bench keeps its switch |
+| The first ranking used raw cosine similarity, so the cheaper Levi's 505 beat the 501 the buyer asked for (0.79 vs 0.83 barely counted) | Printing every buyer's ranking with both embedders before committing; fit is now compared across the candidates |
+| The secret search over the live recording flagged "935" (the floor's digits) | Reading where it was: inside Claude's encrypted reasoning signature, not a number. The search now matches whole numbers only, and has a known hit (the list price) to show it can find one |
+
 ## What the AI cost
 
-The live model calls kept as recordings in this repo cost **about $2.13** at list prices, over
-4,451 calls: about 90 US cents over 846 calls before the deep dive (84.7¢ of it the two simulation
-runs, 2.3¢ the Deal Room's Claude recordings), and $1.23 over 3,605 calls for the deep dive's
-bench (Claude Tommy probed 23.0¢, the tactics with and without the reader 61.5¢, the red team
-14.2¢, and the text check 24.2¢, 22.5¢ of it Sonnet). Recordings that were thrown away and re-made aren't
-counted, so the true total is a little higher. Everything in CI and the README replays the
-recordings, so running the repo costs nothing.
+The live model calls kept as recordings in this repo cost **about $2.47** at list prices, over
+5,614 calls: about 90 US cents over 846 calls before the deep dive (84.7¢ of it the two simulation
+runs, 2.3¢ the Deal Room's Claude recordings); $1.56 over 4,746 calls for the deep dive's bench
+(Claude Tommy probed on 100 lots, with and without the margin, 56.3¢ over 1,932 calls; the tactics
+with and without the reader 61.5¢; the red team 14.2¢; the text check 24.2¢, 22.5¢ of it Sonnet);
+and 0.6¢ for the live demo's Claude recording. Recordings that were thrown away and re-made aren't
+counted (the first 40-lot Tommy recording, 23¢, and two earlier live-demo recordings), so the true
+total is a little higher. Everything in CI and the README replays the recordings, so running the
+repo costs nothing.
 
 Claude Code itself ran on my own subscription and isn't counted here.

@@ -38,7 +38,7 @@ a different seller wins on rating and dispatch.
 
 | Way out | Measured | Fix | After |
 |---|---|---|---|
-| Said in words | 0 of nearly 3,000 calls | the secret never goes in | 0 |
+| Said in words | 0 of over 4,100 calls | the secret never goes in | 0 |
 | From Tommy's moves | 62% of floors found within 2% | secret margin | 37%, for 4 points of deals |
 | | | **firm mode** (seller's choice) | **0**, tested card for card, for about 40 points of deals |
 | By probing matching | exact floor in about 12 accounts | match gate, crowd count | 48% within 2%; crowds flagged |
@@ -171,7 +171,7 @@ what it costs to run. The stop rules guard trust: disputes, seller prices, overr
 - **Replays in CI:** every recorded Claude run replays with no key; a change that alters what the
   model would be sent fails the tests.
 
-**Not yet:** large Claude samples (40 to 100 lots), several model families, human ratings of
+**Not yet:** large Claude samples (100 lots for moves, 5 red-team deals), several model families, human ratings of
 negotiation quality, and live monitoring of model drift.
 
 ## 9. Observability: what you can see while it runs

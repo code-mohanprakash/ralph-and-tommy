@@ -375,7 +375,7 @@ def attacker_scenarios(count: int, seed: int = 7) -> list[Scenario]:
 
 
 TEST_LOTS = 100  # scripted: cheap, so enough lots for tight intervals
-CLAUDE_LOTS = 40  # Claude: what was recorded
+CLAUDE_LOTS = 100  # Claude: what was recorded (40 until 2 Nov)
 TRAINING_LOTS = 400
 PATIENT_VISITS = 3
 

@@ -94,13 +94,13 @@ the log rebuilds each negotiation exactly; the saved state is checked against a 
 
 | Package | What's in it |
 |---|---|
-| `domain` | Money in whole pence, Fleek's fees, lots, offer cards, the state machine, events, replay |
-| `vault` | `SecretMoney`, mandates, bands, yes/no checks, budget across deals, the seeded secrets; the secret margin (`privacy.py`) and the match gate (`gate.py`) |
+| `domain` | Money in whole pence, Fleek's fees, lots (with their public sell mode, firm price, sell-by date and walk-away offer), who says the final yes, offer cards, the state machine, events, replay |
+| `vault` | `SecretMoney`, mandates, bands, yes/no checks, budget across deals, the seeded secrets; the secret margin (`privacy.py`), the match gate and its crowd count (`gate.py`), firm mode (`firm.py`), the check on a seller's walk-away offer (`offers.py`), limits locked mid-deal (`limits.py`) |
 | `market` | The seeded fake market: 500 buyers, 50 sellers, 1,494 lots |
-| `matching` | The funnel: SQL filters, "could any price work?", local embeddings and ranking |
-| `store` | SQLite: append-only events, snapshots, stock and the atomic accept, pairings |
-| `orchestrator` | Opening, rounds and the clock, the turn-by-turn runner, approval |
-| `harness` | The tool loop, strict schemas, the agents' tools, escalation to a person, the quarantined listing reader (`reader.py`) |
+| `matching` | The funnel: SQL filters and the reason each lot was dropped (`explain.py`), "could any price work?", local embeddings, and ranking on fit, price, seller rating and dispatch (`score.py`) |
+| `store` | SQLite: append-only events, snapshots, stock and the atomic accept, pairings, who was asked to approve, offers sent to buyers who walked away |
+| `orchestrator` | Opening (cooldown, 3 tries per lot), rounds and the clock, the turn-by-turn runner, approval by buyer, seller or account manager, stop and hand over (`controls.py`), offers to buyers who walked away (`offers.py`) |
+| `harness` | The tool loop, strict schemas, the agents' tools, escalation to a person, the quarantined listing reader and blind mode (`reader.py`) |
 | `llm` | The Claude client, model routing, spend caps, record and replay |
 | `agents` | The `Agent` interface, scripted Ralph and Tommy, Claude Ralph and Tommy, picking 3 lots |
 | `humans` | What account managers read: the near-miss call list, the watch list from the monitors, and the summary written whenever a person is needed |
@@ -109,6 +109,7 @@ the log rebuilds each negotiation exactly; the saved state is checked against a 
 | `bench` | The deep dive's test bench: generated deals with canary secrets, attackers (moves, matching, words, an adaptive red team), the privacy trade-off sweep, monitor scoring, error bars ([SAFETY_CASE.md](SAFETY_CASE.md)) |
 | `trace` | Exporting a run as JSON |
 | `room` | The Deal Room: a small fixed market, one negotiation through the real code, told as steps; a local web server and the 3D page |
+| `live` | The live demo: the onboarding forms and a ready-made market of 4 sellers (and the check that no secret lands in a box an agent reads), a session run a turn at a time with a view for each side, the matching funnel, per-turn metrics and a trace, a local web server and the page |
 | `config.py` + `market.toml` | Every number we expect to tune |
 
 ## Choices worth knowing

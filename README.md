@@ -15,22 +15,60 @@ without giving your secret limit away (by words, by moves, or by probing) and ne
 outside it.** [docs/SAFETY_CASE.md](docs/SAFETY_CASE.md) has the whole argument. In short:
 
 - **The secret never goes into the AI.** Every request and response in the recorded Claude Tommy
-  and Claude Ralph bench runs, nearly 3,000 calls, was searched for the limits: none found.
-  Claude Tommy tried to cross his floor in 24 of 40 probed lots; code refused every card.
+  and Claude Ralph bench runs, over 4,100 calls, was searched for the limits: none found.
+  Claude Tommy tried to cross his floor in 55 of 100 probed lots; code refused every card.
 - **But a floor can be worked out from moves.** An attacker who knows the (public) code got within
   2% of Tommy's floor on 62% of lots. A secret margin cuts that to 37%, for 4 points of deals.
   Every setting is measured on one chart; noise made it worse until fixed.
 - **Matching gave floors away to the penny** in about 12 fake accounts. A match gate stops that
   (48% within 2%), and its first version turned real buyers away, so it changed.
+- **Zero is a mode, and it's tested.** A seller can pick a public firm price. Then nothing a
+  buyer sees depends on the floor: each lot was negotiated twice with different floors, and the
+  buyer saw the same cards both times, on every lot. It costs deals (56% close against 97%, and
+  Fleek earns 62% of the commission), so it's the seller's choice, not the default.
 - **Fixed pressure tactics didn't move Claude Ralph; an adaptive attacker did** (+2.0% of list).
-  A quarantined reader means he never reads seller text: +0.7%.
-- **Monitors put probing and returning buyers on a watch list** (78% and 84% caught, no false
-  alarms on normal traffic). Two monitors that measured badly were removed.
+  A quarantined reader cut it to +0.7%. In blind mode Ralph sees no seller text at all: two
+  listings that differ only in their words give him byte-identical requests.
+- **Monitors put probing, returning and crowded lots on a watch list** (78%, 84% and 100% of the
+  bench's attacks caught, no false alarms on normal traffic). Two monitors that measured badly
+  were removed.
+- **People decide what matters.** The buyer and the seller each choose whether they approve every
+  deal themselves; an account manager approves big deals, first deals, flagged buyers and unusual
+  prices. It's all asked after the agents agree, so waiting can't give a limit away.
 
 Pass marks were written down before measuring. Three were met (one narrowly) and one was missed;
 the page says which.
 
-## See it: the Deal Room
+## See it live: both screens
+
+```bash
+uv sync
+uv run fleek live
+```
+
+Your browser opens an onboarding page. The seller types in their stock (lots, list prices, a
+secret floor for each, and how Tommy should sell it); the buyer types in what they want and a
+secret top price. Then the buyer's screen and the seller's screen run side by side, turn by
+turn: each shows its own agent's private price checks and its own secret, never the other
+side's. Fleek's column below shows the matching funnel (4 sellers and 18 lots: which the filters
+dropped and why, which the vault said could work, and the ranking on fit, price, seller rating and
+dispatch), the referee, the account manager, the watch list, and per-turn metrics: model calls,
+tokens, cost and time. If a deal fails, Ralph moves to the next ranked lot.
+
+| Who | Chooses | When |
+|---|---|---|
+| Seller | **Haggle** (Tommy gives ground toward the floor) or **firm price** (one public price; nothing about the floor can leak) | before the lot goes on sale |
+| Seller | **Sell-by date** (Tommy gives ground faster near it) and an **offer to buyers who walk away** (a public % off) | before |
+| Buyer and seller | **Who says the final yes**: the agent inside the limit, or "ask me first" | before |
+| Either side | **Pause, hand to an account manager, or stop** | any time |
+| Fleek | 3 tries per buyer per lot, 48 hours to answer, no limit changes mid-deal, account manager for decisions that matter | always |
+
+Every protection is on in this demo. "Fill in a ready-made example" fills both sides; with
+"Claude Haiku 5.5" it replays a recorded Claude run (no key). Add `--live` to ask Claude now with
+anything you type. A secret typed into a box an agent reads (the note to Ralph, a description) is
+refused.
+
+## See it step by step: the Deal Room
 
 ```bash
 uv sync
@@ -78,7 +116,8 @@ More:
 ```bash
 uv run fleek simulate --agents claude-haiku-5-5 --buyers 30   # replays a recorded Claude run
 uv run fleek negotiate --mock --buyer buyer-0002 --db fleek.db  # keep the deal in a file...
-uv run fleek approvals --db fleek.db                            # ...see what waits for a person
+uv run fleek approvals --db fleek.db                            # ...see what waits, and for whom
+uv run fleek approve neg-0001 --as account_manager --db fleek.db  # one person's yes
 uv run fleek digest --db fleek.db                               # the account managers' call list
 uv run fleek summary neg-0001 --db fleek.db                     # what happened, and what to do
 uv run fleek bench                                              # 40 generated deals, scored with 95% intervals
@@ -86,13 +125,14 @@ uv run fleek leak                                               # how close atta
 uv run fleek leak --privacy                                     # ...with the secret margin on
 uv run fleek leak --sweep                                       # every setting, and the trade-off chart
 uv run fleek leak --route matching                              # what matching's yes/no gives away
+uv run fleek leak --firm                                        # firm mode against haggling: deals, commission, leaks
 uv run fleek bench --suite tactics --agents claude-haiku-5-5   # pressure in the listing, vs a control
 uv run fleek bench --suite redteam --agents claude-haiku-5-5 --reader  # an attacker that adapts
 uv run fleek monitors                                           # what each monitor catches, and false alarms
 ```
 
 To run Claude live, put an Anthropic key in `.env` (copy `.env.example`) and add `--live` to
-`fleek safety` or `fleek simulate`. Spend is capped in `market.toml`.
+`fleek live`, `fleek safety` or `fleek simulate`. Spend is capped in `market.toml`.
 
 ## What's here
 
