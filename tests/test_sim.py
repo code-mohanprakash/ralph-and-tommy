@@ -2,10 +2,10 @@ from pathlib import Path
 
 import pytest
 
-from fleek_agents.agents.scripted import ScriptedRalph, ScriptedTommy
 from fleek_agents.domain.state import NegotiationState
 from fleek_agents.evals.sim import simulate
 from fleek_agents.market.seed import generate_market
+from fleek_agents.scripted import ScriptedRalph, ScriptedTommy
 from fleek_agents.vault.seed import generate_mandates
 
 MARKET = generate_market(seed=2026)

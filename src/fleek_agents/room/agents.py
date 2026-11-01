@@ -15,13 +15,13 @@ from pathlib import Path
 
 from fleek_agents.agents.base import Agent
 from fleek_agents.agents.claude import ClaudeAgent
-from fleek_agents.agents.scripted import ScriptedRalph, ScriptedTommy
 from fleek_agents.config import Settings
 from fleek_agents.llm.budget import BudgetedClient, Ledger
 from fleek_agents.llm.client import LiveClient, LLMClient
 from fleek_agents.llm.replay import RecordingClient, ReplayClient
 from fleek_agents.room.play import RoomRun, run_room
 from fleek_agents.room.scenario import SCENARIOS, RoomInput
+from fleek_agents.scripted import ScriptedRalph, ScriptedTommy
 
 RECORDINGS = Path(__file__).parent / "recordings"
 MODEL_NAMES = {"claude-haiku-5-5": "Claude Haiku 5.5", "claude-sonnet-5-5": "Claude Sonnet 5.5"}

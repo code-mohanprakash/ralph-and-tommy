@@ -13,7 +13,6 @@ different floors and everything else the same. If the two runs differ anywhere a
 from dataclasses import dataclass, replace
 
 from fleek_agents.agents.base import Agent
-from fleek_agents.agents.scripted import ScriptedRalph, ScriptedTommy
 from fleek_agents.bench.episode import Episode, TapClient, run_episode
 from fleek_agents.bench.scenarios import Scenario, generate
 from fleek_agents.bench.stats import Estimate, cluster_mean
@@ -21,6 +20,7 @@ from fleek_agents.config import Settings
 from fleek_agents.domain.fees import COMMISSION_PCT
 from fleek_agents.domain.models import Lot, SellMode
 from fleek_agents.domain.money import Pence
+from fleek_agents.scripted import ScriptedRalph, ScriptedTommy
 from fleek_agents.vault.mandate import SellerMandate
 from fleek_agents.vault.secret import SecretMoney
 

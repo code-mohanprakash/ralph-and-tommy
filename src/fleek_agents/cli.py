@@ -15,7 +15,6 @@ from rich.console import Console
 from rich.table import Table
 from sqlalchemy.orm import Session
 
-from fleek_agents.agents.scripted import ScriptedRalph, ScriptedTommy
 from fleek_agents.config import Settings, load_settings
 from fleek_agents.domain.fees import buyer_pays, seller_receives
 from fleek_agents.domain.models import Lot
@@ -32,6 +31,7 @@ from fleek_agents.orchestrator.clock import FakeClock
 from fleek_agents.orchestrator.opening import open_negotiation
 from fleek_agents.orchestrator.run import run_negotiation
 from fleek_agents.safety.scanner import scanner_for
+from fleek_agents.scripted import ScriptedRalph, ScriptedTommy
 from fleek_agents.store.db import Base, make_engine
 from fleek_agents.store.events import EventLog
 from fleek_agents.store.market import LotRow, hard_filter, load_market
@@ -770,7 +770,6 @@ def leak(
     ] = False,
 ) -> None:
     """How close attackers get to a seller's secret floor: from Tommy's moves, or matching."""
-    from fleek_agents.agents.scripted import BoulwareTommy, ScriptedTommy
     from fleek_agents.bench import agents as who
     from fleek_agents.bench.moves import (
         CLAUDE_LOTS,
@@ -781,6 +780,7 @@ def leak(
     )
     from fleek_agents.bench.moves import scripted_tommy as thirds_tommy
     from fleek_agents.llm.env import load_env_file
+    from fleek_agents.scripted import BoulwareTommy, ScriptedTommy
 
     console = Console()
     settings = _settings()

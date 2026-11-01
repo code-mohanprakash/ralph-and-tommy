@@ -8,7 +8,6 @@ import pytest
 from typer.testing import CliRunner
 
 from fleek_agents.agents.base import Action, Send, View
-from fleek_agents.agents.scripted import ScriptedRalph, ScriptedTommy
 from fleek_agents.cli import app
 from fleek_agents.config import Settings, load_settings
 from fleek_agents.domain.events import EscalationReason
@@ -16,6 +15,7 @@ from fleek_agents.domain.money import Pence
 from fleek_agents.humans.handover import STOPPED
 from fleek_agents.room.play import run_room
 from fleek_agents.room.scenario import SCENARIOS, RoomInput
+from fleek_agents.scripted import ScriptedRalph, ScriptedTommy
 
 ROOT = Path(__file__).parent.parent
 SCENARIO = {x.key: x for x in SCENARIOS}

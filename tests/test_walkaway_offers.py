@@ -5,7 +5,6 @@ import pytest
 from sqlalchemy.orm import Session
 
 from fleek_agents.agents.base import Agent, View, WalkAway
-from fleek_agents.agents.scripted import ScriptedRalph, ScriptedTommy
 from fleek_agents.config import PrivacyRules, Settings
 from fleek_agents.domain.money import Pence
 from fleek_agents.domain.rules import walkaway_offer_price
@@ -14,6 +13,7 @@ from fleek_agents.orchestrator.clock import FakeClock
 from fleek_agents.orchestrator.offers import send_walkaway_offers
 from fleek_agents.orchestrator.opening import open_negotiation
 from fleek_agents.orchestrator.run import run_negotiation
+from fleek_agents.scripted import ScriptedRalph, ScriptedTommy
 from fleek_agents.store.db import Base, make_engine
 from fleek_agents.store.deals import put_on_sale
 from fleek_agents.store.events import EventLog

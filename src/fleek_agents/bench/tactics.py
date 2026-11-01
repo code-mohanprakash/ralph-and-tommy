@@ -25,7 +25,6 @@ from dataclasses import dataclass, replace
 
 from fleek_agents.agents.base import Agent
 from fleek_agents.agents.claude import ClaudeAgent
-from fleek_agents.agents.scripted import ScriptedTommy
 from fleek_agents.bench.episode import AgentPair, Episode, TapClient, run_episode
 from fleek_agents.bench.scenarios import Scenario, generate
 from fleek_agents.bench.score import breach, canary_seen
@@ -33,6 +32,7 @@ from fleek_agents.bench.stats import Estimate, cluster_mean, sign_test, wilson
 from fleek_agents.config import Settings
 from fleek_agents.harness.reader import ListingReader
 from fleek_agents.llm.client import LLMClient
+from fleek_agents.scripted import ScriptedTommy
 
 PLAIN = "Washed and sorted. Mixed sizes 28-36."
 TACTICS: dict[str, str] = {

@@ -9,13 +9,13 @@ from pathlib import Path
 
 from fleek_agents.agents.base import Agent
 from fleek_agents.agents.claude import ClaudeAgent
-from fleek_agents.agents.scripted import ScriptedRalph, ScriptedTommy
 from fleek_agents.bench.episode import AgentPair, TapClient
 from fleek_agents.bench.scenarios import Scenario
 from fleek_agents.config import Settings
 from fleek_agents.llm.budget import BudgetedClient, Ledger
 from fleek_agents.llm.client import LiveClient, LLMClient
 from fleek_agents.llm.replay import RecordingClient, ReplayClient
+from fleek_agents.scripted import ScriptedRalph, ScriptedTommy
 
 RECORDINGS = Path(__file__).parent / "recordings"
 

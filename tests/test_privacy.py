@@ -4,7 +4,6 @@ from collections import Counter
 import pytest
 from typer.testing import CliRunner
 
-from fleek_agents.agents.scripted import BoulwareTommy, ScriptedRalph, ScriptedTommy
 from fleek_agents.bench.episode import TapClient
 from fleek_agents.bench.moves import (
     ATTACKER_KEY,
@@ -20,6 +19,7 @@ from fleek_agents.bench.tradeoff import Point, chart, sweep
 from fleek_agents.cli import app
 from fleek_agents.config import PrivacyRules, Settings
 from fleek_agents.domain.money import Pence
+from fleek_agents.scripted import BoulwareTommy, ScriptedRalph, ScriptedTommy
 from fleek_agents.vault.mandate import SellerMandate
 from fleek_agents.vault.privacy import guarded, jitter, lowest_allowed
 

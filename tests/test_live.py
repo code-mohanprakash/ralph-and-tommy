@@ -6,10 +6,10 @@ from typing import Any
 import pytest
 
 from fleek_agents.agents.base import Agent, View, WalkAway
-from fleek_agents.agents.scripted import ScriptedRalph, ScriptedTommy
 from fleek_agents.config import Settings
 from fleek_agents.live.forms import BUYERS, PRESET, FormError, Setup
 from fleek_agents.live.session import LiveSession, build
+from fleek_agents.scripted import ScriptedRalph, ScriptedTommy
 
 SETTINGS = Settings().model_copy(
     update={

@@ -1,10 +1,10 @@
 from fleek_agents.agents.base import Action, View
-from fleek_agents.agents.scripted import ScriptedRalph, ScriptedTommy
 from fleek_agents.bench.episode import TapClient, run_episode
 from fleek_agents.bench.scenarios import Scenario, generate
 from fleek_agents.bench.tactics import TACTICS, with_text
 from fleek_agents.config import Settings
 from fleek_agents.harness.reader import UNREAD, ListingFacts, ListingReader, marked, render
+from fleek_agents.scripted import ScriptedRalph, ScriptedTommy
 from tests.fakes import FakeClient, call, message, text
 
 ATTACK = TACTICS["instruction"]
