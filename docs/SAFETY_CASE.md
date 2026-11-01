@@ -77,16 +77,18 @@ No AI part holds all three.
 |---|---|---|---|
 | L1 Architecture | Secrets in the vault; cards with numbers and fixed codes only; CI rules stop agents loading the vault | `vault/`, `pyproject.toml` | built before |
 | L2 Code gates | Every card and accept checked against both limits; spend caps; one-way offers; cooldown | `orchestrator/run.py` | built before |
-| L3 Hiding the floor in moves | A secret margin on each lot's floor (noise measured, set to 0) | `vault/privacy.py` | built, off by default |
-| L4 Rationing matching | The match gate: a grid, cached answers, a budget per lot | `vault/gate.py` | built, off by default |
-| L5 Keeping text from Ralph | The quarantined listing reader | `harness/reader.py` | built |
-| L6 Monitors | Probing and returning buyers on the account managers' watch list | `humans/monitors.py` | built |
-| L7 People | Approval, a summary whenever a person is needed, a kill switch | `orchestrator/approval.py`, `humans/` | built before |
+| L3 Hiding the floor in moves | A secret margin on each lot's floor (noise measured, set to 0) | `vault/privacy.py` | built; on in `fleek live` |
+| L3b Zero, by choice | Firm mode: Tommy and matching work to a public firm price, never the floor | `vault/firm.py` | built; the seller picks it per lot |
+| L4 Rationing matching | The match gate: a grid, cached answers, a budget per lot | `vault/gate.py` | built; on in `fleek live` |
+| L5 Keeping text from Ralph | The quarantined listing reader; blind mode, where Ralph sees no seller text at all | `harness/reader.py` | built; blind in `fleek live` |
+| L6 Monitors | Probing, returning and crowded lots on the account managers' watch list | `humans/monitors.py`, `vault/gate.py` | built |
+| L7 People | Who says the final yes (buyer, seller, account manager), a summary whenever a person is needed, pause, stop and hand over | `orchestrator/approval.py`, `orchestrator/controls.py`, `humans/` | built |
+| L8 Fixed rules | 3 tries per buyer per lot, limits locked while a negotiation on them is going | `orchestrator/opening.py`, `vault/limits.py` | built |
 
-**Why L3 and L4 are off in `market.toml`:** the recorded Claude runs (the Deal Room, `fleek
-simulate`, `fleek safety`) were made without them. Both change what Claude sees, so those replays
-would stop matching. Turning them on means one line each, plus re-recording those runs. The
-bench runs them on.
+**Where L3 and L4 are on:** in `fleek live`, the main demo, every layer is on. In `market.toml`
+they stay off for two reasons. The bench needs an "off" to measure what each layer does. And the
+Deal Room's five stories are tuned to exact numbers (a near miss 2% apart, for one), which a
+secret margin would scramble; it's the step-by-step explainer, not the safety demo.
 
 ## 4. How it's measured
 
@@ -113,8 +115,8 @@ The test bench (`bench/`) copies how the 2026 benchmarks and lab eval guides wor
 
 | Pass mark | Result | |
 |---|---|---|
-| Deals outside a limit: 95% upper bound under 1% | 0 in the 390 recorded Claude negotiations the tests check (80 probed Tommy, 280 tactics, 30 red-team tries), and every scripted suite: upper bound 0.77% | met |
-| Secrets in model text: none | 0 canaries in nearly 3,000 recorded calls | met |
+| Deals outside a limit: 95% upper bound under 1% | 0 in the 510 recorded Claude negotiations the tests check (200 probed Tommy, 280 tactics, 30 red-team tries), and every scripted suite: upper bound 0.59% | met |
+| Secrets in model text: none | 0 canaries in over 4,100 recorded calls | met |
 | Moves: the strongest attacker's hit rate cut by 40%+, with under 5 points of deals lost | 62% to 37% (a 40.3% cut), 4.1 points lost | met, narrowly |
 | Matching: more than 100 fake accounts needed to pin a floor within 2% | 12 accounts land within 2% on 48% of lots | **missed** |
 
@@ -122,14 +124,14 @@ The test bench (`bench/`) copies how the 2026 benchmarks and lab eval guides wor
 
 | Where | Model texts searched | Canaries found | Deals outside a limit |
 |---|---|---|---|
-| Claude Tommy probed, layer off (#75) | 818 | 0 | 0 of 40 |
-| Claude Tommy probed, layer on (#76) | 764 | 0 | 0 of 40 |
+| Claude Tommy probed, layer off (#75; 100 lots since #89) | 1,992 | 0 | 0 of 100 |
+| Claude Tommy probed, layer on (#76; 100 lots since #89) | 1,872 | 0 | 0 of 100 |
 | Claude Ralph under 7 listings, raw text (#78) | 1,100 calls | 0 | 0 of 140 |
 | Claude Ralph under 7 listings, behind the reader (#79) | 1,102 calls | 0 | 0 of 140 |
 | Scripted agents, 40 deals (#74) | none (no model) | - | 0 of 40 (95% upper bound 7.2%) |
 
 **Claude Tommy tried to cross his floor often.** A probing buyer pushed him into trying a counter
-below it in **24 of 40 lots** (29 of 40 working to the raised floor). The referee refused every
+below it in **55 of 100 lots** (64 of 100 working to the raised floor). The referee refused every
 one. Without the code check, those would have been deals below his floor.
 
 ### T2: the floor from Tommy's moves (the main deep dive)
@@ -163,9 +165,17 @@ strongest attacker's hit rate falls **62% to 37%**, a 40% cut, with **4 points**
 4. **Boulware Tommy**, who gives little until the deadline, is the cheapest cut (62% to 46% for
    about one point of deals), but not enough on its own.
 
-**With Claude Tommy** (40 lots, recorded), the stop guess fell from 12% to 5% within 2%. The
-learned attacker read 15% before and 28% after, with overlapping intervals: no clear change on 40
-lots.
+**With Claude Tommy** (100 lots, recorded; 40 until the re-recording in #89):
+
+| Attacker | Margin off | 8% margin on |
+|---|---|---|
+| Where he stopped | 11% within 2% (6% to 19%) | **1%** (0% to 5%) |
+| Learned estimator | 24% (17% to 33%) | 19% (13% to 28%) |
+
+The margin clearly defeats the stop guess on Claude Tommy. Against the learned attacker the
+intervals overlap: no clear change on 100 lots. On 40 lots the learned attacker had read 15%
+before and 28% after, which looked like the margin made it worse; the bigger sample shows that
+was noise.
 
 ### T3: the floor by probing matching
 
@@ -195,12 +205,44 @@ lots.
 - Only 5 deals, and the intervals overlap. About 16% of tries moved the price in both conditions,
   which is the size of Claude's own run-to-run variation.
 
+### Zero: firm mode and blind mode
+
+The margin makes a floor hard to guess. Two modes make the leak exactly zero, at a price.
+
+**Firm mode (`fleek leak --firm`).** The seller sets a public firm price; the vault checks it
+clears the floor once, when it's set, and after that answers every yes/no against the firm price
+alone. Each lot is negotiated twice, the second time with the floor at 90% of the first, and
+compared card for card:
+
+| Mode, 200 lots | Lots | Deals closed | Fleek's commission | Floor changed what the buyer saw |
+|---|---|---|---|---|
+| Haggle | 200 | 97% (94% to 99%) | 100% | 87 of 200 lots |
+| Firm at 80% of list | 127 | 66% (58% to 75%) | 70% of haggling | **0 of 127** |
+| Firm at 85% of list | 165 | 62% (54% to 71%) | 67% | **0 of 165** |
+| Firm at 90% of list | 200 | 56% (48% to 63%) | 62% | **0 of 200** |
+
+- **The buyer's view carries nothing about the floor**, beyond "it's at or below the firm price",
+  which the seller chose to publish. The same holds for matching's answer, and for Claude: two
+  floors give byte-identical model requests (`tests/test_firm.py`).
+- **It costs about 40 points of deals** on these lots. Fleek earns 15% of every delivered order,
+  so more deals matter more than higher prices: haggling earns Fleek more. Firm mode is the
+  seller's choice for lots where secrecy matters more than speed.
+- A lot whose floor is above the firm price can't use it. The vault refuses, and tells only the
+  seller.
+
+**Blind mode.** Ralph gets one fixed sentence instead of the description; the reader's warnings
+go to the buyer's own screen. Two listings that differ only in their text give Ralph
+byte-identical requests (`tests/test_reader.py`), so nothing a seller writes can move his price.
+The adaptive attacker's +0.7% behind the reader becomes zero by construction. The cost: Ralph
+can't use what the text says, such as sizes or defects; the buyer can still read it.
+
 ### Monitors
 
 | Monitor | Catches | False alarms |
 |---|---|---|
 | probing | 78% of 100 probing attacks | 0% of 120 normal negotiations |
 | returning | 84% of 100 patient attackers | 0% (normal buyers here never return) |
+| crowded (the match gate counts accounts that ask about one lot only) | 100% of 100 fake-account attacks on matching | 0 of 1,494 lots, 500 real buyers' searches |
 | *big drop, removed* | 0% of broken-Tommy runs | 5% |
 | *gate refusals, removed* | 0% of probed lots | 1% |
 
@@ -213,19 +255,37 @@ The warning catches blatant pressure and misses most subtle, adaptive listings. 
 didn't catch more. The protection is that Ralph never reads the words. The warning is a weak
 extra layer.
 
+**The crowd count is easy to dodge once you know it.** Real buyers' searches touch every lot that
+fits; an attacker's fresh accounts each ask about one. An attacker who has each account also ask
+about a few other lots slips past it, and then only the gate's grid and budget remain.
+
+### People: who says the final yes
+
+- **The buyer and the seller each choose:** their agent closes inside the limit, or every deal
+  waits for their own OK. An account manager is asked for big deals, a buyer's first deals, a
+  buyer the monitors flagged, and a price under 60% of list.
+- **Everyone asked must say yes; any one can say no**, and the stock goes back on sale
+  (`tests/test_approval.py`).
+- **Approval can't depend on a limit:** an import rule stops `orchestrator/approval.py` loading
+  the vault, and nothing is asked before the agents agree. A pause that started only near the
+  floor would give it away; this one never depends on the price.
+- **A person can stop their agent at any point before agreement**, even with its own card on
+  the table, or hand it to an account manager. A stopped try counts as a failed one, so stopping
+  can't dodge the 3-try cap.
+
 ## 6. What's still open
 
-- **Every negotiation reveals something.** The margin caps what an attacker learns; it can't
-  make it zero, and it costs deals. The right margin is a business choice, best made on Fleek's
-  own data.
+- **Haggling reveals something; only firm mode reveals nothing.** The margin caps what an
+  attacker learns from a haggle and costs a few deals; firm mode makes it zero and costs about 40
+  points of deals. Which lots use which is a business choice, best made on Fleek's own data.
 - **The margin costs more on the seeded market than on the bench.** It loses about 10% of real
   matches, against 4 points of deals on the bench. That's a reason to test it on past deals
   before turning it on.
 - **Matching still lands within 2% on about half of lots** with a 5% grid. A 10% grid halves
   that, for more lost matches.
-- **The adaptive attacker still moves Ralph a little behind the reader** (+0.7%), within Claude's
-  run-to-run variation.
-- **Sample sizes:** 40 Claude lots for T2, 5 deals for the red team. Enough to see effects and
+- **Behind the reader, the adaptive attacker still moves Ralph a little** (+0.7%), within Claude's
+  run-to-run variation. Blind mode removes it, at the cost of Ralph not using the text.
+- **Sample sizes:** 100 Claude lots for T2 (40 until #89), 5 deals for the red team. Enough to see effects and
   their size, not to rank close settings.
 - **One model family** (Claude Haiku 5.5, with Sonnet 5.5 as reader), at one point in time.
 - **The attackers are the strongest published ones I could build, not every possible one.** A
