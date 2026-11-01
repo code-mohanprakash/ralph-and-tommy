@@ -165,15 +165,19 @@ def _counter_chance(seen: int, meant: int, *, low: int, high: int, sigma: float)
     """How likely the harness's noise turns the counter Tommy meant into the one seen."""
     if high < low:  # no room to move: his own price stands
         return float(seen == meant)
-    if sigma == 0:  # the last round: no noise, only the clamp
-        return float(seen == min(max(meant, low), high))
-    if seen < low or seen > high:
+    if sigma == 0:  # the last round: no noise
+        return float(seen == min(meant, high))
+    if seen > high:
         return 0.0
-    if seen == low:  # noise below the floor is clamped onto it
-        return _normal_below(low + 2.5, meant, sigma)
+    # Noise that would land below the floor is dropped: he sends his own price instead.
+    chance = _normal_below(low - 2.5, meant, sigma) if seen == meant else 0.0
+    if seen < low:
+        return chance
     if seen == high:
-        return 1 - _normal_below(high - 2.5, meant, sigma)
-    return _normal_below(seen + 2.5, meant, sigma) - _normal_below(seen - 2.5, meant, sigma)
+        return chance + 1 - _normal_below(high - 2.5, meant, sigma)
+    return (
+        chance + _normal_below(seen + 2.5, meant, sigma) - _normal_below(seen - 2.5, meant, sigma)
+    )
 
 
 def likelihood(

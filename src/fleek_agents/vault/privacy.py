@@ -86,4 +86,8 @@ def jitter(
     if high < low:
         return price
     stepped = round(noisy / 5) * 5
-    return Pence(int(min(max(stepped, low), high)))
+    if stepped < low:
+        # Clamping to the floor would pile counters up exactly on it and show it. Keep his own
+        # price instead (measured: clamping made the leak worse; see docs/SAFETY_CASE.md).
+        return price
+    return Pence(int(min(stepped, high)))

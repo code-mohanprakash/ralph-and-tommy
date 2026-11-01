@@ -1,4 +1,5 @@
 import os
+from collections import Counter
 
 import pytest
 
@@ -85,6 +86,21 @@ def _jitters(scenario: Scenario, price: int, previous: int, n: int) -> list[Penc
         )
         for i in range(n)
     ]
+
+
+def test_noise_stays_inside_the_allowed_range_and_never_piles_up_on_the_floor() -> None:
+    scenario = generate(5)[2]
+    limit = guarded(scenario.seller_limit, ON)
+    low = lowest_allowed(limit, PIECES, scenario.lot.base_price).value
+    previous = scenario.lot.base_price.value
+    meant = low + 20  # just above the floor, with big noise: half the draws land below it
+    prices = _jitters(scenario, meant, previous, 400)
+    assert all(low <= p.value <= previous for p in prices)
+    counts = Counter(p.value for p in prices)
+    # Clamping would have put about half of them exactly on the floor. Dropped noise keeps
+    # his own price instead, so the floor is no more common than any nearby price.
+    assert counts[low] < 40
+    assert counts[meant] > 100
 
 
 def test_with_the_layer_on_no_deal_breaks_a_real_limit_and_no_card_goes_below_a_floor() -> None:
