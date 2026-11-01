@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 from fleek_agents.agents.base import Agent
 from fleek_agents.bench.episode import TapClient
+from fleek_agents.bench.lost import LostDeals, lost_deals
 from fleek_agents.bench.moves import LeakScore, moves_report
 from fleek_agents.bench.run import run_suite
 from fleek_agents.bench.scenarios import Scenario, generate
@@ -48,6 +49,7 @@ class Point:
     strongest: LeakScore  # the attacker with the highest hit rate at this setting
     deals: Estimate
     buyer_share: Estimate
+    lost: LostDeals | None = None  # where the deals that didn't close were lost
 
     @property
     def label(self) -> str:
@@ -83,7 +85,8 @@ def measure(
         return ScriptedRalph(), model(), []
 
     rows = moves_report(settings, tommy=tommy, model=model, lots=lots)
-    summary = summarise(run_suite(deal_scenarios, pair, settings))
+    episodes = run_suite(deal_scenarios, pair, settings)
+    summary = summarise(episodes)
     return Point(
         style,
         margin,
@@ -91,6 +94,7 @@ def measure(
         max(rows, key=lambda r: r.within.value),
         summary.deal_rate,
         summary.buyer_share,
+        lost_deals(episodes, settings),
     )
 
 
