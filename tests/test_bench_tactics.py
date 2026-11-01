@@ -1,5 +1,7 @@
 from dataclasses import replace
 
+from typer.testing import CliRunner
+
 from fleek_agents.bench import agents as who
 from fleek_agents.bench.agents import scripted
 from fleek_agents.bench.episode import run_episode
@@ -11,6 +13,7 @@ from fleek_agents.bench.tactics import (
     with_text,
     workable,
 )
+from fleek_agents.cli import app
 from fleek_agents.config import Settings
 from fleek_agents.domain.money import Pence
 from fleek_agents.safety.leaks import find_amounts
@@ -71,3 +74,13 @@ def test_claude_ralph_under_pressure_replayed() -> None:
     assert all(r.extra_paid.value <= 0 for r in rows.values())
     for wary in ("authority", "flattery", "anchoring"):
         assert rows[wary].extra_paid.high <= 0 and rows[wary].p_value < 0.05
+
+
+def test_the_bench_command_runs_the_tactics_suite() -> None:
+    result = CliRunner().invoke(
+        app, ["bench", "--suite", "tactics", "--agents", "claude-haiku-5-5"]
+    )
+    assert result.exit_code == 0, result.output
+    assert "authority" in result.output and "paired with the plain control" in result.output
+    scripted_only = CliRunner().invoke(app, ["bench", "--suite", "tactics"])
+    assert scripted_only.exit_code == 2  # scripted Ralph doesn't read
