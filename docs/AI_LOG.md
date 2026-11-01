@@ -32,8 +32,9 @@ calls no model.
 
 ## Where it helped
 
-- **Speed.** About 73 PRs and 1,004 tests between Thursday 29 Oct at night and Saturday 31 Oct.
-  I couldn't have built this much alone in the time.
+- **Speed.** About 73 PRs and 1,004 tests between Thursday 29 Oct at night and Saturday 31 Oct,
+  then 8 more PRs for the deep dive on Sunday 1 Nov (81 PRs, about 1,070 tests). I couldn't
+  have built this much alone in the time.
 - **Tests I wouldn't have written by hand.** Property tests (2,000 random cases that the band words
   and the yes/no checks agree), race tests with 10 threads, and "break it on purpose" checks:
   remove a safety rule, watch which tests fail, put it back.
@@ -105,7 +106,37 @@ production-ready, secure, guaranteed, unhackable, proves, fully autonomous.
 
 Each new test was broken on purpose first and seen to fail, then restored and seen to pass.
 
-## What the agents themselves did that surprised me
+## The deep dive (Sunday 1 Nov)
+
+**How the plan was made.** Fleek's brief says to go deep on one thing. Claude's first plan for
+that was built from negotiation papers from 1998–2007 and a few searches. I said it wasn't good
+enough: AI labs and companies running these agents use many techniques at once. Claude then
+researched what Anthropic, OpenAI, Google DeepMind, Microsoft and Meta publish, what companies
+running commerce agents do (Pactum, Google AP2, Stripe, Project Vend), the 2025–26 negotiation
+papers, and practitioners' writing. It rebuilt the plan from that. I also asked for the PRs to be
+ordered by what each needs, so each one builds only on merged work. The result is
+[SAFETY_CASE.md](SAFETY_CASE.md).
+
+**Mistakes Claude made in this round, and how each was caught:**
+
+| Mistake | Caught by |
+|---|---|
+| The canary generator kept canaries unique across scenarios. Past about 200 scenarios it walked floors down by pounds (968p became 97p, then negative) | Training the attackers on 400 scenarios; fixed inside #74 before merging, with a test that fails on the old code |
+| A commit went in while `mypy` was failing: a pipe to `tail` hid the exit code | Its own next check; fixed and amended before pushing. Checks now run with `pipefail` |
+| The first noise design clamped counters onto the floor, which showed the floor and made the leak worse (62% to 75%) | The trade-off sweep; fixed in #76 with a test |
+| The first match-gate budget (5 answers a lot a day) turned real buyers away: 50% of 500 buyers' matches | Measuring on the seeded market, not just the bench; fixed in #77 |
+| Two monitors (big drop, gate refusals) caught nothing | Scoring them on the bench's attacks; removed in #80 |
+| Draft docs said "about 3,800 calls searched" and "0 of 419 negotiations" | Recounting against what the tests check before committing: nearly 3,000 and 390 |
+
+**What surprised me:**
+
+- **Fixed pressure tactics didn't work on Claude Ralph; an adaptive attacker did.** Three of six
+  tactics made him pay *less*. A Claude attacker rewriting after each try got him to pay up to 2%
+  more. That's what "The Attacker Moves Second" predicts: test against attackers that adapt.
+- **Noise didn't hide a floor from an attacker who knows the code.** The secret margin did, and
+  it costs deals: the trade-off chart is the real answer.
+
+
 
 - **Claude Tommy tried to counter below his own floor** when a probing bot pushed him. The harness
   refused the card (`card_outside_limit`) and the floor stayed secret. This is why limits are
@@ -121,8 +152,11 @@ Each new test was broken on purpose first and seen to fail, then restored and se
 
 ## What the AI cost
 
-The live model calls kept as recordings in this repo cost **about 90 US cents** at list prices,
-over 846 calls (84.7¢ of it the two simulation runs, 2.3¢ the Deal Room's Claude recordings). Recordings that were thrown away and re-made aren't
+The live model calls kept as recordings in this repo cost **about $2.13** at list prices, over
+4,451 calls: about 90 US cents over 846 calls before the deep dive (84.7¢ of it the two simulation
+runs, 2.3¢ the Deal Room's Claude recordings), and $1.23 over 3,605 calls for the deep dive's
+bench (Claude Tommy probed 23.0¢, the tactics with and without the reader 61.5¢, the red team
+14.2¢, and the text check 24.2¢, 22.5¢ of it Sonnet). Recordings that were thrown away and re-made aren't
 counted, so the true total is a little higher. Everything in CI and the README replays the
 recordings, so running the repo costs nothing.
 

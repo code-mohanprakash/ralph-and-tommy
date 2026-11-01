@@ -8,6 +8,28 @@ Fleek's GTM Engineer role.
 - **The AI decides what to offer. Code decides what's allowed. The secret limits never go into the
   AI.**
 
+## The deep dive: can someone work out a secret limit?
+
+Fleek's brief says to go deep on one thing. This repo's one thing: **agents that haggle for you
+without giving your secret limit away (by words, by moves, or by probing) and never agree a deal
+outside it.** [docs/SAFETY_CASE.md](docs/SAFETY_CASE.md) has the whole argument. In short:
+
+- **The secret never goes into the AI.** Every request and response in the recorded Claude Tommy
+  and Claude Ralph bench runs, nearly 3,000 calls, was searched for the limits: none found.
+  Claude Tommy tried to cross his floor in 24 of 40 probed lots; code refused every card.
+- **But a floor can be worked out from moves.** An attacker who knows the (public) code got within
+  2% of Tommy's floor on 62% of lots. A secret margin cuts that to 37%, for 4 points of deals.
+  Every setting is measured on one chart; noise made it worse until fixed.
+- **Matching gave floors away to the penny** in about 12 fake accounts. A match gate stops that
+  (48% within 2%), and its first version turned real buyers away, so it changed.
+- **Fixed pressure tactics didn't move Claude Ralph; an adaptive attacker did** (+2.0% of list).
+  A quarantined reader means he never reads seller text: +0.7%.
+- **Monitors put probing and returning buyers on a watch list** (78% and 84% caught, no false
+  alarms on normal traffic). Two monitors that measured badly were removed.
+
+Pass marks were written down before measuring. Three were met (one narrowly) and one was missed;
+the page says which.
+
 ## See it: the Deal Room
 
 ```bash
@@ -40,6 +62,8 @@ uv run fleek safety
 uv run fleek negotiate --mock --buyer buyer-0002
 ```
 
+- **`fleek leak`**, **`fleek bench`** and **`fleek monitors`** are the deep dive's measurements;
+  [docs/SAFETY_CASE.md](docs/SAFETY_CASE.md) explains each.
 - **`fleek safety`** attacks an unsafe "naive" design (the secret in its prompt, free-text chat)
   and the protected one the same way. From the recorded runs: the naive seller gave its exact
   floor away under ordinary haggling; the protected agents agreed no deal outside a limit, and when
