@@ -1,5 +1,9 @@
-from fleek_agents.bench.scenarios import generate
+from fleek_agents.agents.base import Action, View
+from fleek_agents.agents.scripted import ScriptedRalph, ScriptedTommy
+from fleek_agents.bench.episode import TapClient, run_episode
+from fleek_agents.bench.scenarios import Scenario, generate
 from fleek_agents.bench.tactics import TACTICS, with_text
+from fleek_agents.config import Settings
 from fleek_agents.harness.reader import UNREAD, ListingFacts, ListingReader, marked, render
 from tests.fakes import FakeClient, call, message, text
 
@@ -60,3 +64,33 @@ def test_each_text_is_read_once() -> None:
     reader.quarantine(lot)
     reader.quarantine(lot)
     assert len(fake.requests) == 1
+
+
+class Spy:
+    """Records the description each side's view shows, and plays like the scripted agent."""
+
+    def __init__(self, inner: ScriptedRalph | ScriptedTommy) -> None:
+        self.inner, self.seen = inner, []  # type: ignore[var-annotated]
+
+    def decide(self, view: View) -> Action:
+        self.seen.append(view.lot.description)
+        return self.inner.decide(view)
+
+
+def test_only_ralph_sees_the_summary_tommy_and_the_checks_see_the_real_lot() -> None:
+    reader, _ = reader_answering(message(call("report_listing", FACTS)))
+    scenario = with_text(next(s for s in generate(10) if s.truth.deal_possible), ATTACK)
+    ralph, tommy = Spy(ScriptedRalph()), Spy(ScriptedTommy())
+
+    def pair(_s: Scenario, _r: int) -> tuple[Spy, Spy, list[TapClient]]:
+        return ralph, tommy, []
+
+    episode = run_episode(
+        scenario,
+        pair,
+        Settings(),
+        buyer_lot=reader.quarantine(scenario.lot),
+    )
+    assert ralph.seen and all(d.startswith("Summary by Fleek") for d in ralph.seen)
+    assert tommy.seen and all(d == ATTACK for d in tommy.seen)
+    assert episode.state is not None

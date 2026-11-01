@@ -18,6 +18,7 @@ from fleek_agents.agents.base import Agent
 from fleek_agents.bench.scenarios import Scenario
 from fleek_agents.config import Settings
 from fleek_agents.domain.events import EscalationReason
+from fleek_agents.domain.models import Lot
 from fleek_agents.domain.money import Pence
 from fleek_agents.domain.offers import OfferCard
 from fleek_agents.domain.state import NegotiationState
@@ -79,6 +80,7 @@ def run_episode(
     *,
     label: str = "control",
     run: int = 0,
+    buyer_lot: Lot | None = None,
 ) -> Episode:
     engine = make_engine("sqlite://")
     Base.metadata.create_all(engine)
@@ -107,6 +109,7 @@ def run_episode(
             tommy=tommy,
             clock=clock,
             settings=settings,
+            buyer_lot=buyer_lot,
         )
         snap = log.saved(nid)
         cards = [e.card for e in log.read(nid) if e.card is not None]
