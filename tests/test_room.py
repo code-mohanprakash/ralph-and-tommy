@@ -83,7 +83,7 @@ def test_the_default_room_tells_the_whole_deal_in_order(settings: Settings) -> N
     assert s["outcome"]["state"] == "pending_approval"
     assert s["outcome"]["price"] == 1210
     assert s["outcome"]["buyer_pays"] == 304000  # (£12.10 + £3.00) x 200 + £20 fee
-    assert s["outcome"]["why_waiting"] == "£1,500 or more"
+    assert s["outcome"]["why_waiting"] == "£1,500 or more; one of the buyer's first 3 deals"
 
 
 def test_matching_drops_lahore_by_the_filters_and_delhi_by_the_vault(

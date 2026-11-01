@@ -47,6 +47,10 @@ output_cents_per_mtok = 2000
 person_at_or_above_pence = 150000
 # ...or if it's one of the buyer's first deals. Otherwise the rule approves it.
 first_deals_by_person = 3
+# ...or if the agreed price is below this % of the list price: unusual enough for a second look.
+# Also: a buyer the monitors flagged (probing, coming back, many new accounts) always waits.
+# On top of these, a buyer or seller who chose final_say = person approves each deal themselves.
+unusual_below_pct = 60
 
 [digest]
 # A failed negotiation is a near miss if the last offer and counter ended this close (% of the counter).

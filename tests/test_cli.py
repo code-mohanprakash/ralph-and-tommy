@@ -101,7 +101,8 @@ def test_a_deal_waits_then_a_person_approves_it(tmp_path: Path) -> None:
         app, ["negotiate", "--mock", "--buyer", "buyer-0002", "--matcher", "words", "--db", db]
     )
     assert first.exit_code == 0, first.output
-    assert "Waiting for a person" in first.output and "fleek approve neg-0001" in first.output
+    flat = " ".join(first.output.split())  # rich wraps long lines
+    assert "Waiting for a person" in flat and "fleek approve neg-0001" in flat
     listed = runner.invoke(app, ["approvals", "--db", db], env={"COLUMNS": "200"})
     assert "neg-0001" in listed.output and "£1,500 or more" in listed.output  # £2,332.50 deal
     done = runner.invoke(app, ["approve", "neg-0001", "--db", db])
