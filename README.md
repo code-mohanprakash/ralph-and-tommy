@@ -53,8 +53,8 @@ secret floor for each, and how Tommy should sell it); the buyer types in what th
 secret top price. Then the buyer's screen and the seller's screen run side by side, turn by
 turn: each shows its own agent's private price checks and its own secret, never the other
 side's. Fleek's column below shows the matching funnel (4 sellers and 18 lots: which the filters
-dropped and why, which the vault said could work, and the ranking on fit, price, seller rating and
-dispatch), the referee, the account manager, the watch list, and per-turn metrics: model calls,
+dropped and why, which the vault said could work, the ranking on fit, price, seller rating and
+dispatch, and, with Claude, Ralph's re-rank of the top 5 with a reason for each), the referee, the account manager, the watch list, and per-turn metrics: model calls,
 tokens, cost and time. If a deal fails, Ralph moves to the next ranked lot.
 
 | Who | Chooses | When |
@@ -127,6 +127,7 @@ uv run fleek leak                                               # how close atta
 uv run fleek leak --privacy                                     # ...with the secret margin on
 uv run fleek leak --sweep                                       # every setting, and the trade-off chart
 uv run fleek leak --route matching                              # what matching's yes/no gives away
+uv run fleek rerank --reasons                                   # Claude's re-rank against the formula, 12 cases
 uv run fleek leak --firm                                        # firm mode against haggling: deals, commission, leaks
 uv run fleek bench --suite tactics --agents claude-haiku-5-5   # pressure in the listing, vs a control
 uv run fleek bench --suite redteam --agents claude-haiku-5-5 --reader  # an attacker that adapts

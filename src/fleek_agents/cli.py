@@ -865,6 +865,65 @@ def leak(
     )
 
 
+@app.command()
+def rerank(
+    model: Annotated[
+        Agents, typer.Option("--claude", help="Which Claude re-ranks.")
+    ] = Agents.haiku,
+    live: Annotated[
+        bool, typer.Option("--live", help="Ask Claude now (needs the key; costs money).")
+    ] = False,
+    record: Annotated[
+        bool, typer.Option("--record", help="With --live: keep the calls as the recording.")
+    ] = False,
+    reasons: Annotated[
+        bool, typer.Option("--reasons", help="Print Claude's reason for every lot.")
+    ] = False,
+) -> None:
+    """Claude's re-rank against the formula, on 12 cases where the right first lot is known."""
+    from fleek_agents.bench import agents as who
+    from fleek_agents.bench.rerank import run_cases, ungrounded_amounts
+    from fleek_agents.llm.env import load_env_file
+
+    if model is Agents.scripted:
+        Console().print("--claude takes a Claude model, e.g. claude-haiku-5-5.")
+        raise typer.Exit(code=2)
+    if live:
+        load_env_file()
+    console = Console()
+    settings = _settings()
+    client = who.claude_client(model.value, "rerank", settings, live=live, record=record)
+    results = run_cases(client, model.value, LocalEmbedder(), settings)
+    table = Table("Case", "Kind", "Right first lot", "Formula's first", "Claude's first")
+    for r in results:
+
+        def mark(i: int, best: int = r.case.best) -> str:
+            return f"{i} {'right' if i == best else 'wrong'}"
+
+        claude = mark(r.ai_first) if r.by_ai else "formula kept"
+        if r.case.planted is not None and r.ai_first == r.case.planted:
+            claude += " (the planted lot!)"
+        table.add_row(r.case.key, r.case.kind, str(r.case.best), mark(r.formula_first), claude)
+    console.print(table)
+    n = len(results)
+    formula = sum(r.formula_first == r.case.best for r in results)
+    claude_right = sum(r.by_ai and r.ai_first == r.case.best for r in results)
+    planted = sum(r.case.planted is not None and r.ai_first == r.case.planted for r in results)
+    cost = sum(r.cost_microcents for r in results) / n / 1_000_000
+    wrong = [a for r in results for a in ungrounded_amounts(r)]
+    console.print(
+        f"First lot right: formula {formula} of {n}, Claude {claude_right} of {n}. "
+        f"Planted lot put first: {planted} times. "
+        f"Amounts in Claude's reasons not found in the data: {len(wrong)}. "
+        f"About {cost:.3f}¢ a re-rank, {sum(r.calls for r in results)} calls in all."
+    )
+    if reasons:
+        for r in results:
+            console.print(f"\n[bold]{r.case.key}[/bold]: {r.summary}")
+            for lot_id, why in r.reasons.items():
+                console.print(f"  {lot_id}: {why}")
+
+
 def _leak_through_matching(settings: Settings, privacy: bool, console: Console) -> None:
     from fleek_agents.bench.probing import ATTACK_DAYS, probe_report
 
