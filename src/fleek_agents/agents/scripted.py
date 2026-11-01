@@ -14,6 +14,7 @@ from fleek_agents.domain.offers import Role, Terms
 
 INSIDE = {Band.STRONG, Band.ACCEPTABLE, Band.STRETCH}
 SHIP_BY = timedelta(days=21)
+SELL_BY_SOON = timedelta(days=7)  # this close to a lot's sell-by date, Tommy gives more ground
 
 
 def _round5(pence: int) -> Pence:
@@ -87,7 +88,11 @@ class ScriptedTommy:
         if mine is None:
             return Send(terms=_terms(view, view.list_price))
         gap = mine.base_price.value - offer.base_price.value
-        step = _round5(mine.base_price.value - int(gap * self.share(view.rounds_left)))
+        share = self.share(view.rounds_left)
+        sell_by = view.lot.sell_by
+        if sell_by is not None and sell_by - view.today <= SELL_BY_SOON:
+            share = max(share, Fraction(1, 2))  # public deadline, so speed tells nothing secret
+        step = _round5(mine.base_price.value - int(gap * share))
         if band is Band.STRETCH and view.rounds_left <= 1:
             return Accept()
         if step < mine.base_price and view.band(step) in INSIDE:

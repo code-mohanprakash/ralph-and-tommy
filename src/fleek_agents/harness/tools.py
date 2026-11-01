@@ -76,6 +76,11 @@ def _lot_facts(view: View) -> str:
         if lot.firm_price is not None
         else {}
     )
+    if lot.sell_by is not None:
+        firm = firm | {
+            "sell_by": lot.sell_by.isoformat(),
+            "sell_by_note": "The seller wants this lot sold by this date. It is public.",
+        }
     return json.dumps(
         {
             "title": lot.title,

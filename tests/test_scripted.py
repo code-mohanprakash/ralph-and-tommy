@@ -258,3 +258,51 @@ def test_a_card_past_its_sender_s_own_limit_is_never_sent(who: str) -> None:
     assert log.saved(nid).escalated_because is EscalationReason.CARD_OUTSIDE_LIMIT
     sent = [e.card.base_price for e in log.read(nid) if e.card is not None]
     assert Pence(99_900) not in sent and Pence(1) not in sent
+
+
+TODAY = T0.date()
+
+
+def seller_view_after_one_round(lot: Lot) -> View:
+    """Tommy's turn: he countered at list (14.00), the buyer has raised to 11.00."""
+    from datetime import timedelta
+
+    from fleek_agents.domain.bands import Band
+    from fleek_agents.domain.offers import OfferCard, Role
+
+    def card(n: int, role: Role, price: int) -> OfferCard:
+        return OfferCard(
+            negotiation_id="neg-0001",
+            round=n,
+            from_role=role,
+            base_price=Pence(price),
+            bundles=1,
+            prepaid=False,
+            ship_by=TODAY + timedelta(days=21),
+            expires_at=T0 + timedelta(hours=48),
+        )
+
+    return View(
+        lot=lot,
+        want=None,
+        bundles=1,
+        list_price=lot.base_price,
+        history=(card(1, Role.BUYER, 1000), card(2, Role.SELLER, 1400), card(3, Role.BUYER, 1100)),
+        rounds_left=3,
+        band=lambda p: Band.STRETCH if p.value >= 1200 else Band.OUTSIDE,
+        today=TODAY,
+    )
+
+
+def test_tommy_gives_more_ground_close_to_a_public_sell_by_date() -> None:
+    from datetime import timedelta
+
+    soon = LOT.model_copy(update={"sell_by": TODAY + timedelta(days=3)})
+    later = LOT.model_copy(update={"sell_by": TODAY + timedelta(days=30)})
+    steps = []
+    for lot in (LOT, later, soon):
+        view = seller_view_after_one_round(lot)
+        action = ScriptedTommy().decide(view)
+        assert isinstance(action, Send)
+        steps.append(action.terms.base_price)
+    assert steps[0] == steps[1] > steps[2]  # only a near date speeds him up

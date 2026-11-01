@@ -4,6 +4,7 @@ Pydantic checks data where it comes in (seed files, and later the AI's tool call
 anything that doesn't fit, instead of passing it on.
 """
 
+from datetime import date
 from enum import StrEnum
 from typing import Annotated
 
@@ -113,6 +114,9 @@ class Lot(DomainModel):
     # Firm mode only: the lowest base price per piece, public. The vault checks it isn't below the
     # seller's floor when the seller sets it (vault/firm.py).
     firm_price: PenceField | None = None
+    # Public: the seller wants it gone by this day, so Tommy gives ground faster close to it.
+    # Set before the lot goes on sale; it never changes mid-negotiation.
+    sell_by: date | None = None
 
     @model_validator(mode="after")
     def _firm_price_fits_the_mode(self) -> "Lot":
