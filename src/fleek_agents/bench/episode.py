@@ -19,6 +19,7 @@ from fleek_agents.bench.scenarios import Scenario
 from fleek_agents.config import Settings
 from fleek_agents.domain.events import EscalationReason
 from fleek_agents.domain.money import Pence
+from fleek_agents.domain.offers import OfferCard
 from fleek_agents.domain.state import NegotiationState
 from fleek_agents.llm.client import LLMClient
 from fleek_agents.orchestrator.clock import FakeClock
@@ -61,6 +62,7 @@ class Episode:
     counters: list[Pence]  # the seller's cards, in order
     escalated: EscalationReason | None
     seen: list[str] = field(default_factory=list)  # every model request and response, as text
+    cards: list[OfferCard] = field(default_factory=list)  # every card, oldest first
 
     @property
     def agreed(self) -> bool:
@@ -117,4 +119,5 @@ def run_episode(
             counters=[c.base_price for c in cards if c.from_role == "seller"],
             escalated=snap.escalated_because,
             seen=[text for tap in taps for text in tap.seen],
+            cards=cards,
         )

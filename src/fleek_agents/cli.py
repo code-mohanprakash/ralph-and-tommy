@@ -503,6 +503,49 @@ def bench(
 
 
 @app.command()
+def leak(
+    tommy: Annotated[
+        Agents, typer.Option(help="Which Tommy to attack. Claude replays unless --live.")
+    ] = Agents.scripted,
+    live: Annotated[
+        bool, typer.Option("--live", help="Ask Claude now (needs the key; costs money).")
+    ] = False,
+    record: Annotated[
+        bool, typer.Option("--record", help="With --live: keep the calls as the recording.")
+    ] = False,
+) -> None:
+    """How close attackers get to Tommy's secret floor from his moves alone."""
+    from fleek_agents.bench import agents as who
+    from fleek_agents.bench.moves import NEAR_PCT, claude_tommy, moves_report, scripted_tommy
+    from fleek_agents.llm.env import load_env_file
+
+    console = Console()
+    settings = _settings()
+    if tommy is Agents.scripted:
+        rows = moves_report(settings, tommy=scripted_tommy)
+    else:
+        if live:
+            load_env_file()
+        client = who.claude_client(tommy.value, "moves", settings, live=live, record=record)
+        rows = moves_report(settings, tommy=claude_tommy(client, tommy.value), replayable=False)
+    table = Table(
+        "Attacker", f"Guess within {NEAR_PCT}% of the floor", "Typical error", "Error removed"
+    )
+    for row in rows:
+        table.add_row(
+            row.attacker,
+            row.within.as_percent(),
+            f"{row.median_error_pct:.1f}%",
+            f"{row.gain:.0%}",
+        )
+    console.print(f"Attacking {tommy.value} Tommy on {rows[0].within.n} lots, by moves only.")
+    console.print(table)
+    console.print(
+        f"Knowing only the list price, the typical error is {rows[0].prior_median_error_pct:.1f}%."
+    )
+
+
+@app.command()
 def export(
     out: Annotated[str, typer.Option(help="Where to write the run, e.g. viewer/runs/run.json.")],
     db: Annotated[str, typer.Option(help="The deals file.")] = "fleek.db",
