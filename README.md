@@ -61,6 +61,7 @@ uv run fleek bench                                              # 40 generated d
 uv run fleek leak                                               # how close attackers get to Tommy's floor
 uv run fleek leak --privacy                                     # ...with the secret margin on
 uv run fleek leak --sweep                                       # every setting, and the trade-off chart
+uv run fleek leak --route matching                              # what matching's yes/no gives away
 ```
 
 To run Claude live, put an Anthropic key in `.env` (copy `.env.example`) and add `--live` to

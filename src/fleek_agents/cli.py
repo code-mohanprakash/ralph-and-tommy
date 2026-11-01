@@ -502,8 +502,14 @@ def bench(
     console.print(table)
 
 
+class Route(StrEnum):
+    moves = "moves"  # what Tommy's counters give away
+    matching = "matching"  # what matching's yes/no gives away to many accounts
+
+
 @app.command()
 def leak(
+    route: Annotated[Route, typer.Option(help="Which way the secret could get out.")] = Route.moves,
     tommy: Annotated[
         Agents, typer.Option(help="Which Tommy to attack. Claude replays unless --live.")
     ] = Agents.scripted,
@@ -526,7 +532,7 @@ def leak(
         bool, typer.Option("--record", help="With --live: keep the calls as the recording.")
     ] = False,
 ) -> None:
-    """How close attackers get to Tommy's secret floor from his moves alone."""
+    """How close attackers get to a seller's secret floor: from Tommy's moves, or matching."""
     from fleek_agents.agents.scripted import BoulwareTommy, ScriptedTommy
     from fleek_agents.bench import agents as who
     from fleek_agents.bench.moves import (
@@ -541,6 +547,9 @@ def leak(
 
     console = Console()
     settings = _settings()
+    if route is Route.matching:
+        _leak_through_matching(settings, privacy, console)
+        return
     if sweep:
         from fleek_agents.bench.tradeoff import chart
         from fleek_agents.bench.tradeoff import sweep as measure_all
@@ -601,6 +610,33 @@ def leak(
     console.print(
         f"Knowing only the list price, the typical error is {rows[0].prior_median_error_pct:.1f}%."
     )
+
+
+def _leak_through_matching(settings: Settings, privacy: bool, console: Console) -> None:
+    from fleek_agents.bench.probing import ATTACK_DAYS, probe_report
+
+    rules = settings.match_gate.model_copy(update={"on": True})
+    margin = settings.privacy.model_copy(update={"on": privacy})
+    rows = probe_report(rules, margin)
+    table = Table(
+        "Matching", "Within 2% of the floor", "Typical error", "Accounts used", "Matches lost"
+    )
+    for row in rows:
+        table.add_row(
+            row.label,
+            row.within.as_percent(),
+            f"{row.median_error_pct:.1f}%",
+            f"{row.median_questions:.0f}",
+            "-" if row.label.startswith("Open") else row.matches_lost.as_percent(),
+        )
+    layer = f", with the {margin.margin_max_pct}% secret margin" if privacy else ""
+    console.print(
+        f"Many accounts asking matching about each of {rows[0].within.n} lots for "
+        f"{ATTACK_DAYS} days. Gate: {rules.answers_per_lot_per_day} answers a lot a day, "
+        f"{rules.grid_pct}% grid{layer}."
+    )
+    console.print(table)
+    console.print("Matches lost: real buyers' matches the gate drops, on the seeded market.")
 
 
 @app.command()

@@ -1,3 +1,5 @@
+from typer.testing import CliRunner
+
 from fleek_agents.bench.probing import (
     binary_search,
     gated,
@@ -6,6 +8,7 @@ from fleek_agents.bench.probing import (
     probe_report,
 )
 from fleek_agents.bench.scenarios import generate
+from fleek_agents.cli import app
 from fleek_agents.config import MatchGateRules, PrivacyRules
 from fleek_agents.vault.gate import MatchGate
 
@@ -44,3 +47,10 @@ def test_a_small_budget_turns_real_buyers_away_on_a_busy_market() -> None:
     roomy = matches_lost(GATE, OFF, wants=200)
     assert tight.value > 0.25
     assert roomy.value < 0.07
+
+
+def test_the_leak_command_attacks_matching() -> None:
+    result = CliRunner().invoke(app, ["leak", "--route", "matching"])
+    assert result.exit_code == 0, result.output
+    assert "Matches lost: real buyers' matches the gate drops" in result.output
+    assert "Open matching" in result.output and "100% (96% to" in result.output
