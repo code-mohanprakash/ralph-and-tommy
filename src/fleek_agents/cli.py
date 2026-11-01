@@ -814,6 +814,7 @@ def monitors(
         TEXT_MODELS,
         attack_listings,
         behaviour_report,
+        crowd_report,
         text_report,
     )
     from fleek_agents.bench.tactics import run_tactics
@@ -830,7 +831,7 @@ def monitors(
         tactics=("control",),
     )["control"]
     table = Table("Monitor", "Catches", "Attacks", "False alarms", "Normal traffic")
-    for row in behaviour_report(settings, controls):
+    for row in [*behaviour_report(settings, controls), crowd_report(settings)]:
         table.add_row(
             row.flag.value,
             row.caught.as_percent(),

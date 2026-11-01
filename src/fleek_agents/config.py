@@ -123,6 +123,8 @@ class MatchGateRules(BaseModel):
     # ask about one lot). 20 refuses about 1 question in 800; the grid does the hiding.
     answers_per_lot_per_day: Annotated[StrictInt, Field(ge=1)] = 20
     grid_pct: Annotated[StrictInt, Field(ge=1, le=20)] = 5  # top prices rounded down to this step
+    # A lot is "crowded" when this many accounts in one day asked about it and nothing else.
+    crowd_accounts: Annotated[StrictInt, Field(ge=2)] = 5
 
 
 class Settings(BaseModel):

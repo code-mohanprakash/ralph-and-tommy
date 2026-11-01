@@ -53,3 +53,11 @@ def test_the_monitors_command_prints_both_tables() -> None:
     result = CliRunner().invoke(app, ["monitors"])
     assert result.exit_code == 0, result.output
     assert "probing" in result.output and "claude-sonnet-5-5" in result.output
+
+
+def test_the_crowd_count_catches_fake_accounts_and_not_real_buyers() -> None:
+    from fleek_agents.bench.monitoring import crowd_report
+    from fleek_agents.config import Settings
+
+    row = crowd_report(Settings(), lots=20, wants=200)
+    assert row.caught.value == 1.0 and row.false_alarms.value == 0.0

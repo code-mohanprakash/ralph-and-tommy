@@ -94,3 +94,37 @@ def test_only_ralph_sees_the_summary_tommy_and_the_checks_see_the_real_lot() -> 
     assert ralph.seen and all(d.startswith("Summary by Fleek") for d in ralph.seen)
     assert tommy.seen and all(d == ATTACK for d in tommy.seen)
     assert episode.state is not None
+
+
+def test_in_blind_mode_ralph_s_requests_are_byte_identical_whatever_the_seller_wrote() -> None:
+    import json
+
+    from fleek_agents.agents.claude import ClaudeAgent
+    from fleek_agents.harness.reader import NOT_SHOWN, blind
+
+    base = next(s for s in generate(10) if s.truth.deal_possible)
+    price = base.lot.base_price.value * 70 // 100 // 5 * 5
+    offer = {"price_pence": price, "prepaid": False, "reason_codes": []}
+
+    def ralph_requests(description: str, *, hide: bool) -> str:
+        scenario = with_text(base, description)
+        client = FakeClient(
+            message(call("get_lot", {})),
+            message(call("send_offer", offer)),
+            message(call("walk_away", {"reason_code": None})),
+            message(call("walk_away", {"reason_code": None})),
+        )
+        ralph = ClaudeAgent(client, model="claude-haiku-5-5", prompt="ralph")
+
+        def pair(_s: Scenario, _r: int) -> tuple[ClaudeAgent, ScriptedTommy, list[TapClient]]:
+            return ralph, ScriptedTommy(), []
+
+        run_episode(scenario, pair, Settings(), buyer_lot=blind(scenario.lot) if hide else None)
+        return json.dumps(client.requests, default=str)
+
+    calm = "Washed and sorted. Mixed sizes 28-36."
+    blind_calm, blind_attack = ralph_requests(calm, hide=True), ralph_requests(ATTACK, hide=True)
+    assert blind_calm == blind_attack
+    assert NOT_SHOWN in blind_calm and ATTACK not in blind_calm
+    # The control: without blind mode the seller's words reach him, so the requests differ.
+    assert ralph_requests(calm, hide=False) != ralph_requests(ATTACK, hide=False)

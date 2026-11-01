@@ -76,3 +76,17 @@ def test_with_the_privacy_layer_on_the_gate_uses_the_margin_floor() -> None:
         assert with_margin >= without
         higher += with_margin > without
     assert higher >= 20  # the margin moves the answer on most lots
+
+
+def test_a_lot_is_crowded_when_many_accounts_ask_about_it_and_nothing_else() -> None:
+    first, second = generate(2)
+    gate = MatchGate(RULES)
+    q1, q2 = quote(first.lot, first.seller, bundles=1), quote(second.lot, second.seller, bundles=1)
+    for n in range(5):  # five fresh accounts, one question each, about one lot
+        gate.possible(buyer(n, 1000 + n), first.seller_limit, q1, today=DAY)
+    for n in range(10, 20):  # ten real buyers whose searches cover both lots
+        gate.possible(buyer(n, 1200), first.seller_limit, q1, today=DAY)
+        gate.possible(buyer(n, 1200), second.seller_limit, q2, today=DAY)
+    assert gate.crowded_lots(DAY, accounts=5) == {first.lot.id: 5}
+    assert gate.crowded_lots(DAY, accounts=6) == {}
+    assert gate.crowded_lots(DAY + timedelta(days=1), accounts=1) == {}  # counted per day

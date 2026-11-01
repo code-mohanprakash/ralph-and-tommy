@@ -131,3 +131,34 @@ def test_the_watch_list_flags_a_returning_prober_from_the_record_and_not_a_norma
     assert Flag.PROBING in watched[0].flags
     assert Flag.RETURNING in watched[-1].flags
     assert "mapping the seller's floor" in watched[-1].why
+
+
+def test_negotiations_on_a_crowded_lot_go_on_the_watch_list() -> None:
+    settings = Settings()
+    s = next(s for s in generate(10) if s.truth.deal_possible)
+    engine = make_engine("sqlite://")
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        log, clock = EventLog(session), FakeClock(datetime(2026, 11, 2, 9, tzinfo=UTC))
+        put_on_sale(session, s.lot.id, bundles=1)
+        nid = open_negotiation(
+            log, buyer_id="buyer-7001", lot_id=s.lot.id, clock=clock, rules=settings.negotiation
+        )
+        run_negotiation(
+            log,
+            nid,
+            lot=s.lot,
+            seller=s.seller,
+            want=s.want,
+            bundles=1,
+            buyer_limit=s.buyer,
+            seller_limit=s.seller_limit,
+            ralph=ScriptedRalph(),
+            tommy=ScriptedTommy(),
+            clock=clock,
+            settings=settings,
+        )
+        lots = {s.lot.id: s.lot}
+        assert watch_list(log, lots) == []  # a normal buyer on a quiet lot
+        (watch,) = watch_list(log, lots, crowded={s.lot.id})
+    assert watch.flags == (Flag.CROWDED,) and "fake accounts" in watch.why

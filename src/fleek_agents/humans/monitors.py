@@ -11,6 +11,10 @@ cries wolf (bench/monitoring.py).
   attacks, no false alarms on 120 normal negotiations.
 - returning: the same buyer came back to the same lot after failing, more than once. Catches
   84% of patient attackers.
+- crowded: many accounts in one day asked matching about this lot and nothing else (the match
+  gate counts them; vault/gate.py). Catches every fake-account attack on the bench, and fired
+  on none of 1,494 lots for 500 real buyers. An attacker who knows the rule can dodge it by
+  having each account also ask about other lots: then only the gate's grid and budget remain.
 
 Two more were built and measured, then removed (see the git history): a "big drop" in a
 seller's price caught none of a broken Tommy's runs, because the referee stops his card before
@@ -20,7 +24,7 @@ attacks, because a careful attacker never runs a lot's budget dry.
 Nothing here reads the vault: monitors see what an account manager could see.
 """
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from itertools import pairwise
@@ -40,12 +44,15 @@ RETURNS = 2
 class Flag(StrEnum):
     PROBING = "probing"
     RETURNING = "returning"
+    CROWDED = "crowded"
 
 
 WHY = {
     Flag.PROBING: "The buyer climbed in small binding steps and walked away without accepting: "
     "the pattern of someone mapping the seller's floor.",
     Flag.RETURNING: "The same buyer keeps coming back to this lot after failing.",
+    Flag.CROWDED: "Many accounts asked about this lot and nothing else on one day: the pattern "
+    "of fake accounts mapping its floor.",
 }
 
 
@@ -99,8 +106,14 @@ class Watch:
         return " ".join(WHY[f] for f in self.flags)
 
 
-def watch_list(log: EventLog, lots: Mapping[str, Lot]) -> list[Watch]:
-    """Every negotiation in the record a monitor flags, oldest first, with plain reasons."""
+def watch_list(
+    log: EventLog, lots: Mapping[str, Lot], crowded: Collection[str] = ()
+) -> list[Watch]:
+    """Every negotiation in the record a monitor flags, oldest first, with plain reasons.
+
+    crowded: lot ids the match gate found crowded (it has the counts; this module can't read
+    the vault). Every negotiation on one of them is flagged.
+    """
     seen: list[Visit] = []
     out = []
     for row in log.session.query(PairingRow).order_by(PairingRow.id):
@@ -120,6 +133,8 @@ def watch_list(log: EventLog, lots: Mapping[str, Lot]) -> list[Watch]:
             ),
         )
         flags = flags_for(visit, seen)
+        if row.lot_id in crowded:
+            flags.append(Flag.CROWDED)
         seen.append(visit)
         if flags:
             title = lots[row.lot_id].title

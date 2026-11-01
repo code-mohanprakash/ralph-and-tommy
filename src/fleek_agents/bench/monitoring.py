@@ -132,6 +132,59 @@ def behaviour_report(
     ]
 
 
+def crowd_report(settings: Settings, *, lots: int = 100, wants: int = 500) -> MonitorScore:
+    """The match gate's crowd count, on the fake-account attack and on real buyers' searches."""
+    from datetime import timedelta
+
+    from sqlalchemy.orm import Session
+
+    from fleek_agents.bench.probing import (
+        ATTACK_DAYS,
+        FIRST_DAY,
+        SEED,
+        binary_search,
+        gated,
+    )
+    from fleek_agents.market.seed import generate_market
+    from fleek_agents.matching.funnel import possible_deals
+    from fleek_agents.store.db import Base, make_engine
+    from fleek_agents.store.market import load_market
+    from fleek_agents.vault.gate import MatchGate
+    from fleek_agents.vault.seed import generate_mandates
+
+    rules, at_least = settings.match_gate, settings.match_gate.crowd_accounts
+    days = [FIRST_DAY + timedelta(days=d) for d in range(ATTACK_DAYS)]
+    caught = 0
+    scenarios = generate(lots)
+    for s in scenarios:
+        gate = MatchGate(rules, settings.privacy)
+        binary_search(s, gated(s, gate), gate=gate)
+        caught += any(gate.crowded_lots(day, accounts=at_least) for day in days)
+
+    market = generate_market(seed=SEED)
+    secrets = generate_mandates(market, seed=SEED)
+    engine = make_engine("sqlite://")
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        load_market(session, market)
+        gate = MatchGate(rules, settings.privacy)
+        asked: set[str] = set()
+        for want in market.wants[:wants]:
+            asked |= {
+                c.lot.id
+                for c in possible_deals(session, market, secrets, want, gate=gate, today=FIRST_DAY)
+            }
+        crowded = gate.crowded_lots(FIRST_DAY, accounts=at_least)
+    searched = len(market.lots)
+    return MonitorScore(
+        Flag.CROWDED,
+        wilson(caught, len(scenarios)),
+        wilson(len(crowded), searched),
+        f"{len(scenarios)} fake-account attacks on matching",
+        f"{searched} lots, {wants} real buyers' searches in one day",
+    )
+
+
 def text_flagged(facts: ListingFacts | None) -> bool:
     """The reader's warnings as a yes/no check. A text it couldn't read counts as flagged."""
     return facts is None or facts.addressed_to_buying_agents or bool(facts.pressure)
