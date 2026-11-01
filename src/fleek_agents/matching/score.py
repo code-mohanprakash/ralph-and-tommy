@@ -1,7 +1,10 @@
 """Ranking the lots that could work, on public facts, with the reasons kept for the screen.
 
 Each part is a number from 0 to 1, compared across this buyer's candidates:
-- fit: how close the lot's words are to the buyer's (cosine similarity of embeddings);
+- fit: how close the lot's words are to the buyer's, against the other candidates. Raw cosine
+  similarities from an embedding model bunch together (0.79 against 0.83 for "505" and "501"
+  when the buyer wrote "501"), so the closest candidate scores 1 and the others lose ground by
+  how far they trail, over a spread of at least FIT_SPREAD so tiny differences can't swing it;
 - price: the cheapest delivered price per piece scores 1, others cheapest / theirs;
 - quality: the seller's public rating out of 5;
 - speed: the fastest dispatch scores 1, others fastest / theirs.
@@ -20,12 +23,14 @@ from fleek_agents.domain.models import Lot, Seller, Want
 from fleek_agents.domain.rules import Candidate
 from fleek_agents.matching.embeddings import Embedder
 
+FIT_SPREAD = 0.1  # cosine differences smaller than this count for less than the whole fit weight
+
 
 @dataclass(frozen=True)
 class Scored:
     candidate: Candidate
     total: float
-    fit: float
+    fit: float  # 0 to 1, against the other candidates
     price: float
     quality: float
     speed: float
@@ -50,7 +55,10 @@ def score(
     if not candidates:
         return []
     vectors = embedder.embed([want.text] + [lot_words(c.lot) for c in candidates])
-    fits = vectors[1:] @ vectors[0]
+    raw = [max(0.0, float(x)) for x in vectors[1:] @ vectors[0]]
+    best_fit, worst_fit = max(raw), min(raw)
+    spread = max(best_fit - worst_fit, FIT_SPREAD)
+    fits = [max(0.0, 1 - (best_fit - r) / spread) for r in raw]
     delivered = [c.quote.base_price.value + c.quote.shipping.value for c in candidates]
     days = [max(1, sellers[c.lot.seller_id].dispatch_days) for c in candidates]
     cheapest, fastest = min(delivered), min(days)
@@ -58,7 +66,7 @@ def score(
     whole = w.fit + w.price + w.quality + w.speed
     out = []
     for i, c in enumerate(candidates):
-        fit = max(0.0, float(fits[i]))
+        fit = fits[i]
         price = cheapest / delivered[i]
         quality = sellers[c.lot.seller_id].quality_score / 5
         speed = fastest / days[i]

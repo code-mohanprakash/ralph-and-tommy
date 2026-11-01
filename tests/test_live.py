@@ -8,7 +8,7 @@ import pytest
 from fleek_agents.agents.base import Agent, View, WalkAway
 from fleek_agents.agents.scripted import ScriptedRalph, ScriptedTommy
 from fleek_agents.config import Settings
-from fleek_agents.live.forms import PRESET, FormError, Setup
+from fleek_agents.live.forms import BUYERS, PRESET, FormError, Setup
 from fleek_agents.live.session import LiveSession, build
 
 SETTINGS = Settings().model_copy(
@@ -139,3 +139,56 @@ def test_the_recorded_claude_session_replays_and_no_secret_reaches_the_model() -
         pattern = rf"(?<![A-Za-z0-9+/.]){re.escape(secret)}(?![A-Za-z0-9])"
         assert re.search(pattern, seen) is None, secret
     assert re.search(r"(?<![A-Za-z0-9+/.])1400(?![A-Za-z0-9])", seen)  # it finds the list price
+
+
+def test_the_funnel_says_why_each_lot_was_dropped_and_ranks_the_rest() -> None:
+    live = LiveSession(setup(), SETTINGS, scripted, "test")
+    rows = live.funnel["rows"]
+    assert live.funnel["sellers"] == 4 and live.funnel["lots"] == len(rows) == 18
+    dropped = [r for r in rows if r["step"] == "filters"]
+    assert dropped and all(r["why"] for r in dropped)
+    assert any("grade C" in r["why"] for r in dropped)  # Karachi's grade C 501s
+    no_price = {r["seller"] for r in rows if r["step"] == "vault"}
+    assert no_price == {"Delhi Vintage Exports", "Rotterdam Rag House"}  # floors above the top
+    ranked = [r for r in rows if r["step"] == "ranked"]
+    assert [r["rank"] for r in ranked] == [1, 2, 3]
+    assert ranked[0]["title"].startswith("Levi's 501 jeans, grade A")
+    assert "funnel" in live.view()["fleek"] and "funnel" not in live.view()["buyer"]
+
+
+def test_when_a_lot_fails_ralph_moves_to_the_next_and_each_seller_sees_only_their_own() -> None:
+    agents: Iterator[tuple[Agent, Agent]] = iter(
+        [(Leaves(), ScriptedTommy()), (ScriptedRalph(), ScriptedTommy())]
+    )
+    live = run(
+        LiveSession(
+            Setup.model_validate({**PRESET, "buyer": BUYERS[1]}),  # Depop: Rotterdam first
+            SETTINGS,
+            lambda: next(agents),
+            "test",
+        )
+    )
+    assert len(live.tried) == 2
+    first, second = (live.log.saved(n).state.value for n in live.tried)
+    assert first == "walked_away" and second == "pending_approval"
+    view = live.view()
+    assert view["seller"]["name"] == "Karachi Textile Recycling"  # the second-ranked seller
+    assert any("moves on to the next lot" in line["text"] for line in view["buyer"]["lines"])
+    seller_text = json.dumps(view["seller"]["lines"])
+    assert "Rotterdam" not in seller_text and "walks away" not in seller_text
+
+
+def test_metrics_and_the_trace_hold_no_secret() -> None:
+    live = run(LiveSession(setup(), SETTINGS, scripted, "test"))
+    totals = live.view()["fleek"]["metrics"]["totals"]
+    assert totals["agent_turns"] > 0 and totals["lots_tried"] == 1 and totals["cards"] > 0
+    assert totals["cost_cents"] == 0  # scripted agents call no model
+    trace = json.dumps(live.trace(), ensure_ascii=False)
+    floors = [
+        line["floor"]
+        for seller in (PRESET["seller"], *PRESET["others"])
+        for line in seller["stock"]
+    ]
+    for pence in (*floors, PRESET["buyer"]["top_price"]):
+        pounds = f"£{pence // 100}.{pence % 100:02d}"
+        assert pounds not in trace and f'"price_pence": {pence},' not in trace, pence
