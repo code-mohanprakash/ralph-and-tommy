@@ -26,6 +26,7 @@ from fleek_agents.store.events import EventLog
 from fleek_agents.vault.bands import buyer_band, seller_band
 from fleek_agents.vault.checks import buyer_ok, can_accept, seller_ok
 from fleek_agents.vault.mandate import BuyerMandate, SellerMandate
+from fleek_agents.vault.privacy import guarded, jitter
 
 THINKING = timedelta(hours=1)  # simulated time between turns
 
@@ -59,24 +60,23 @@ class Deal:
     elsewhere: Callable[[], tuple[str, ...]] = lambda: ()  # the buyer's other open deals
 
 
-def _inside_own_limit(action: Send, deal: Deal, buyers_turn: bool) -> bool:
+def _inside_own_limit(
+    action: Send, deal: Deal, seller_limit: SellerMandate, buyers_turn: bool
+) -> bool:
     terms, lot = action.terms, deal.lot
     pieces = terms.bundles * lot.pieces
     if buyers_turn:
         return buyer_ok(
             deal.buyer_limit, base_price=terms.base_price, shipping=lot.shipping, pieces=pieces
         )
-    return seller_ok(deal.seller_limit, base_price=terms.base_price, pieces=pieces)
+    return seller_ok(seller_limit, base_price=terms.base_price, pieces=pieces)
 
 
 def take_step(log: EventLog, deal: Deal, *, clock: FakeClock, settings: Settings) -> bool:
     """One turn of one negotiation. False once it has ended or is waiting for approval."""
-    negotiation_id, lot, buyer_limit, seller_limit = (
-        deal.negotiation_id,
-        deal.lot,
-        deal.buyer_limit,
-        deal.seller_limit,
-    )
+    # With the privacy layer on, Tommy works to his floor plus the lot's secret margin.
+    seller_limit = guarded(deal.seller_limit, settings.privacy)
+    negotiation_id, lot, buyer_limit = deal.negotiation_id, deal.lot, deal.buyer_limit
     q = quote(lot, deal.seller, bundles=deal.bundles)
     pieces, rules, t = q.pieces, settings.negotiation, settings.bands
 
@@ -118,7 +118,9 @@ def take_step(log: EventLog, deal: Deal, *, clock: FakeClock, settings: Settings
             at=clock.now(),
             reason=EscalationReason.OVER_BUDGET,
         )
-    elif isinstance(action, Send) and not _inside_own_limit(action, deal, buyers_turn):
+    elif isinstance(action, Send) and not _inside_own_limit(
+        action, deal, seller_limit, buyers_turn
+    ):
         # A card is binding: one past its sender's own limit is never put on the table.
         log.append(
             negotiation_id,
@@ -128,7 +130,23 @@ def take_step(log: EventLog, deal: Deal, *, clock: FakeClock, settings: Settings
             reason=EscalationReason.CARD_OUTSIDE_LIMIT,
         )
     elif isinstance(action, Send):
-        send_card(log, negotiation_id, by=actor, terms=action.terms, clock=clock, rules=rules)
+        terms = action.terms
+        if not buyers_turn:  # with the privacy layer on, his counter gets shrinking noise
+            previous = snap.last_counter.base_price if snap.last_counter else None
+            price = jitter(
+                terms.base_price,
+                limit=seller_limit,
+                previous=previous,
+                list_price=q.base_price,
+                pieces=terms.bundles * lot.pieces,
+                lot_id=lot.id,
+                card_id=f"{negotiation_id}@{clock.now().isoformat()}",
+                rounds_left=view.rounds_left,
+                max_rounds=rules.max_rounds,
+                rules=settings.privacy,
+            )
+            terms = terms.model_copy(update={"base_price": price})
+        send_card(log, negotiation_id, by=actor, terms=terms, clock=clock, rules=rules)
     elif isinstance(action, Accept):
         card = view.on_table
         ok = card is not None and can_accept(

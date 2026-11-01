@@ -1,10 +1,14 @@
 import pytest
 
+from fleek_agents.agents.scripted import ScriptedRalph, ScriptedTommy
+from fleek_agents.bench.episode import TapClient
+from fleek_agents.bench.run import run_suite
 from fleek_agents.bench.scenarios import PIECES, Scenario, generate
+from fleek_agents.bench.score import breach
 from fleek_agents.config import PrivacyRules, Settings
 from fleek_agents.domain.money import Pence
 from fleek_agents.vault.mandate import SellerMandate
-from fleek_agents.vault.privacy import guarded, jitter
+from fleek_agents.vault.privacy import guarded, jitter, lowest_allowed
 
 ON = PrivacyRules(on=True, margin_max_pct=8, noise_pct=4)
 NOISY = Settings(privacy=ON)
@@ -72,3 +76,19 @@ def _jitters(scenario: Scenario, price: int, previous: int, n: int) -> list[Penc
         )
         for i in range(n)
     ]
+
+
+def test_with_the_layer_on_no_deal_breaks_a_real_limit_and_no_card_goes_below_a_floor() -> None:
+    for tommy in (ScriptedTommy,):
+
+        def pair(
+            _s: Scenario, _r: int, tommy: type[ScriptedTommy] = tommy
+        ) -> tuple[ScriptedRalph, ScriptedTommy, list[TapClient]]:
+            return ScriptedRalph(), tommy(), []
+
+        episodes = run_suite(generate(100), pair, NOISY)
+        assert not any(breach(e) for e in episodes)
+        for e in episodes:
+            worked_to = guarded(e.scenario.seller_limit, ON)
+            low = lowest_allowed(worked_to, PIECES, e.scenario.lot.base_price)
+            assert all(c >= low for c in e.counters)
