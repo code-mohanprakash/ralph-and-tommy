@@ -6,12 +6,16 @@ their agents (and Project Vend found a second AI on the same model shares its bl
 these are code, not a model). Each is scored on the bench for what it catches and how often it
 cries wolf (bench/monitoring.py).
 
-- big_drop: a seller's counter fell by more than 15% of the list price in one round. Tommy's
-  rules never do that; an agent that does may be malfunctioning or manipulated.
 - probing: a buyer climbed in small binding steps and walked away without accepting, the
-  pattern of an attacker mapping a floor (bench/moves.py).
-- returning: the same buyer came back to the same lot after failing, more than once.
-- gate_refusals: the match gate refused questions about a lot today (vault/gate.py).
+  pattern of an attacker mapping a floor (bench/moves.py). Catches 78% of the bench's probing
+  attacks, no false alarms on 120 normal negotiations.
+- returning: the same buyer came back to the same lot after failing, more than once. Catches
+  84% of patient attackers.
+
+Two more were built and measured, then removed (see the git history): a "big drop" in a
+seller's price caught none of a broken Tommy's runs, because the referee stops his card before
+anyone sees it, and flagged 5% of normal ones; match-gate refusals caught none of the matching
+attacks, because a careful attacker never runs a lot's budget dry.
 
 Nothing here reads the vault: monitors see what an account manager could see.
 """
@@ -24,27 +28,20 @@ from itertools import pairwise
 from fleek_agents.domain.money import Pence
 from fleek_agents.domain.offers import OfferCard
 
-BIG_DROP_PCT = 15
 SMALL_STEP_PCT = 8
 PROBING_OFFERS = 3
 RETURNS = 2
 
 
 class Flag(StrEnum):
-    BIG_DROP = "big_drop"
     PROBING = "probing"
     RETURNING = "returning"
-    GATE_REFUSALS = "gate_refusals"
 
 
 WHY = {
-    Flag.BIG_DROP: "The seller's agent dropped its price by more than "
-    f"{BIG_DROP_PCT}% of list in one round. Check it's working as it should.",
     Flag.PROBING: "The buyer climbed in small binding steps and walked away without accepting: "
     "the pattern of someone mapping the seller's floor.",
     Flag.RETURNING: "The same buyer keeps coming back to this lot after failing.",
-    Flag.GATE_REFUSALS: "Matching turned away questions about this lot today: many accounts "
-    "may be asking about it.",
 }
 
 
@@ -58,12 +55,6 @@ class Visit:
     cards: Sequence[OfferCard]
     accepted_by_buyer: bool
     walked_away_by_buyer: bool
-
-
-def big_drop(visit: Visit) -> bool:
-    counters = [c.base_price.value for c in visit.cards if c.from_role == "seller"]
-    limit = visit.list_price.value * BIG_DROP_PCT / 100
-    return any(a - b > limit for a, b in pairwise(counters))
 
 
 def probing(visit: Visit) -> bool:
@@ -80,15 +71,11 @@ def returning(history: Sequence[Visit]) -> bool:
     return len(failed) >= RETURNS
 
 
-def flags_for(visit: Visit, earlier: Sequence[Visit] = (), refused_today: int = 0) -> list[Flag]:
+def flags_for(visit: Visit, earlier: Sequence[Visit] = ()) -> list[Flag]:
     found = []
-    if big_drop(visit):
-        found.append(Flag.BIG_DROP)
     if probing(visit):
         found.append(Flag.PROBING)
     same = [v for v in earlier if v.buyer_id == visit.buyer_id and v.lot_id == visit.lot_id]
     if returning([*same, visit]):
         found.append(Flag.RETURNING)
-    if refused_today > 0:
-        found.append(Flag.GATE_REFUSALS)
     return found

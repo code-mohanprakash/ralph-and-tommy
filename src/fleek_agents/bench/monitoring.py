@@ -10,26 +10,16 @@ spots (Project Vend's lesson), so a different one is measured too.
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 
-from sqlalchemy.orm import Session
-
 from fleek_agents.agents.base import Agent
 from fleek_agents.agents.scripted import ScriptedRalph, ScriptedTommy
 from fleek_agents.bench.episode import AgentPair, Episode, TapClient, run_episode
 from fleek_agents.bench.moves import probe_sessions
-from fleek_agents.bench.probing import FIRST_DAY, SEED, binary_search, gated
 from fleek_agents.bench.scenarios import Scenario, generate
 from fleek_agents.bench.stats import Estimate, wilson
-from fleek_agents.config import MatchGateRules, Settings
+from fleek_agents.config import Settings
 from fleek_agents.domain.state import NegotiationState
 from fleek_agents.harness.reader import ListingFacts, ListingReader
 from fleek_agents.humans.monitors import Flag, Visit, flags_for
-from fleek_agents.market.seed import generate_market
-from fleek_agents.matching.funnel import possible_deals
-from fleek_agents.room.play import BreaksARule
-from fleek_agents.store.db import Base, make_engine
-from fleek_agents.store.market import load_market
-from fleek_agents.vault.gate import MatchGate
-from fleek_agents.vault.seed import generate_mandates
 
 # Clean listings for the text check's false-alarm rate. Some are borderline on purpose: real
 # sellers do mention scarcity, prices and condition, and a check that flags them is a nuisance.
@@ -118,48 +108,19 @@ def behaviour_report(
     attacker = _attacker_lots(scenarios, settings, 3)
     first_visits = [lot[0] for lot in attacker]
 
-    # A broken Tommy: halves the buyer's offer on his second counter (the Deal Room's demo).
-    broken = [
-        visit_from(run_episode(s, _pair(lambda: BreaksARule(ScriptedTommy())), settings))
-        for s in scenarios
-    ]
-
     returned = []
     for lot in attacker:
         flagged = any(Flag.RETURNING in flags_for(v, lot[:i]) for i, v in enumerate(lot))
         returned.append(flagged)
     normal_returning = 0  # each normal buyer visits a lot once
 
-    # The match gate's refusals: on lots a matching attacker probed, and on the seeded market's
-    # real traffic (many buyers asking about the same lots on one day).
-    probed = []
-    for s in scenarios:
-        gate = MatchGate(MatchGateRules(on=True), settings.privacy)
-        binary_search(s, gated(s, gate), gate=gate)
-        probed.append(bool(gate.refused_lots))
-    busy = _busy_market_gate()
-    asked = busy.asked_lots()
     return [
-        MonitorScore(
-            Flag.BIG_DROP,
-            wilson(_flagged(broken, Flag.BIG_DROP), len(broken)),
-            wilson(_flagged(normal, Flag.BIG_DROP), len(normal)),
-            f"{len(broken)} negotiations with a broken Tommy",
-            normal_label,
-        ),
         MonitorScore(
             Flag.PROBING,
             wilson(_flagged(first_visits, Flag.PROBING), len(first_visits)),
             wilson(_flagged(normal, Flag.PROBING), len(normal)),
             f"{len(first_visits)} probing attacks (first visit)",
             normal_label,
-        ),
-        MonitorScore(
-            Flag.GATE_REFUSALS,
-            wilson(sum(probed), len(probed)),
-            wilson(len(busy.refused_lots & asked), len(asked)),
-            f"{len(probed)} lots probed through matching by many accounts",
-            f"{len(asked)} lots real buyers asked about on the seeded market",
         ),
         MonitorScore(
             Flag.RETURNING,
@@ -169,20 +130,6 @@ def behaviour_report(
             normal_label,
         ),
     ]
-
-
-def _busy_market_gate(wants: int = 500) -> MatchGate:
-    """The gate after one day of the seeded market's real buyers asking about lots."""
-    market = generate_market(seed=SEED)
-    secrets = generate_mandates(market, seed=SEED)
-    engine = make_engine("sqlite://")
-    Base.metadata.create_all(engine)
-    gate = MatchGate(MatchGateRules(on=True))
-    with Session(engine) as session:
-        load_market(session, market)
-        for want in market.wants[:wants]:
-            possible_deals(session, market, secrets, want, gate=gate, today=FIRST_DAY)
-    return gate
 
 
 def text_flagged(facts: ListingFacts | None) -> bool:

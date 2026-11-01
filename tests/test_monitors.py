@@ -69,15 +69,3 @@ def test_flags_come_with_plain_words_for_the_account_manager() -> None:
 
     assert set(WHY) == set(Flag)
     assert all(text.endswith(".") and len(text) < 200 for text in WHY.values())
-
-
-def test_a_seller_dropping_a_lot_in_one_round_is_flagged() -> None:
-    steady = [("buyer", 500), ("seller", 1000), ("buyer", 550), ("seller", 900)]
-    plunge = [("buyer", 500), ("seller", 1000), ("buyer", 550), ("seller", 700)]
-    assert Flag.BIG_DROP not in flags_for(visit(steady))
-    assert Flag.BIG_DROP in flags_for(visit(plunge))  # 30% of list in one round
-
-
-def test_refusals_at_the_match_gate_are_flagged() -> None:
-    assert Flag.GATE_REFUSALS in flags_for(visit(CLIMB), refused_today=3)
-    assert Flag.GATE_REFUSALS not in flags_for(visit(CLIMB), refused_today=0)
