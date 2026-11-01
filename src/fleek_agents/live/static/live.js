@@ -265,8 +265,15 @@ function renderFunnel(root, view) {
   $('[data-field="funnel-rows"]', root).replaceChildren(...rows.map((r) => {
     let result, why;
     if (r.step === "ranked") {
-      result = `#${r.rank}`;
-      why = `score ${r.total} = fit ${r.fit}, price ${r.price} (${r.delivered} delivered), rating ${r.quality}/5, dispatch ${r.dispatch_days} days`;
+      const formula = `score ${r.total} = fit ${r.fit}, price ${r.price} (${r.delivered} delivered), rating ${r.quality}/5, dispatch ${r.dispatch_days} days`;
+      if (r.ai_why) {
+        result = r.ai_rank === r.rank ? `#${r.ai_rank}` : `#${r.ai_rank} (formula #${r.rank})`;
+        why = el("div", {}, el("div", { text: `Ralph: ${r.ai_why}` }),
+          el("div", { class: "muted small", text: `Formula: ${formula}` }));
+      } else {
+        result = `#${r.ai_rank || r.rank}`;
+        why = formula;
+      }
     } else if (r.step === "vault") {
       result = "no price"; why = r.why;
     } else {
@@ -274,12 +281,17 @@ function renderFunnel(root, view) {
     }
     const row = el("tr", { class: `${r.step}${r.lot === current ? " current" : ""}` },
       el("td", { text: r.lot === current ? `${result} ◀ now` : result }),
-      el("td", { text: r.title }), el("td", { text: r.seller }), el("td", { text: why }));
+      el("td", { text: r.title }), el("td", { text: r.seller }),
+      typeof why === "string" ? el("td", { text: why }) : el("td", {}, why));
     return row;
   }), ...(filtered ? [toggle] : []));
   const w = fu.weights;
   $('[data-field="weights"]', root).textContent =
-    `Ranking uses public facts only, weighted fit ${w.fit}, price ${w.price}, seller rating ${w.quality}, dispatch ${w.speed} (market.toml). The vault's yes or no is the only part that touches a secret, and it never gives a number.`;
+    `Ranking uses public facts only, weighted fit ${w.fit}, price ${w.price}, seller rating ${w.quality}, dispatch ${w.speed} (market.toml). ` +
+    (fu.rerank && fu.rerank.by === "claude"
+      ? `Then Claude re-orders the top ${fu.rerank.shortlist} on the buyer's own words, from the same public facts (no seller description), and gives a reason for each; code checks every lot appears once. `
+      : "With scripted agents the formula's order stands. ") +
+    `The vault's yes or no is the only part that touches a secret, and it never gives a number.`;
 }
 
 function renderMetrics(root, m) {

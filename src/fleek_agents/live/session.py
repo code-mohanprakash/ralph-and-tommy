@@ -18,6 +18,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from fleek_agents.agents.base import Agent, Send
+from fleek_agents.agents.rerank import SHORTLIST, Reranked
 from fleek_agents.config import Settings
 from fleek_agents.domain.events import EscalationReason, Event
 from fleek_agents.domain.models import (
@@ -260,6 +261,9 @@ class LiveSession:
         self.watched: dict[str, _Watched] = {}
         self.funnel: dict[str, Any] = {}
         self.queue: list[Scored] = []  # ranked lots not tried yet
+        # Claude agents can also re-rank the formula's top lots (agents/rerank.py); scripted
+        # ones can't, so the formula's order stands.
+        self._rerank: Callable[..., Reranked] | None = getattr(agents, "rerank", None)
         self.tried: list[str] = []  # negotiation ids, in order
         self.metrics: list[dict[str, Any]] = []  # one row per agent turn
         self._match()
@@ -285,6 +289,9 @@ class LiveSession:
         possible = {c.lot.id for c in found}
         ranked = score(self.want, found, self.sellers, self.embedder, self.settings.matching)
         place = {s.lot.id: n for n, s in enumerate(ranked, 1)}
+        redone = self._ai_rank(ranked)
+        final = redone.order if redone is not None else ranked
+        ai_place = {s.lot.id: n for n, s in enumerate(final, 1)} if redone else {}
         rows = []
         for lot in self.market.lots:
             reason = why_not(lot, self.want, in_stock=lot.available)
@@ -302,6 +309,8 @@ class LiveSession:
                 row |= {
                     "step": "ranked",
                     "rank": place[lot.id],
+                    "ai_rank": ai_place.get(lot.id),
+                    "ai_why": redone.reasons.get(lot.id) if redone else None,
                     "total": round(s.total, 2),
                     "fit": round(s.fit, 2),
                     "price": round(s.price, 2),
@@ -310,7 +319,9 @@ class LiveSession:
                     "delivered": str(s.candidate.quote.base_price + s.candidate.quote.shipping),
                 }
             rows.append(row)
-        rows.sort(key=lambda r: (r.get("rank", 99), r["step"] != "vault", r["lot"]))
+        rows.sort(
+            key=lambda r: (r.get("ai_rank") or r.get("rank", 99), r["step"] != "vault", r["lot"])
+        )
         passed = sum(r["step"] != "filters" for r in rows)
         self.funnel = {
             "sellers": len(self.sellers),
@@ -319,6 +330,11 @@ class LiveSession:
             "possible": len(possible),
             "rows": rows,
             "weights": self.settings.matching.model_dump(),
+            "rerank": (
+                {"by": "claude", "shortlist": SHORTLIST, "summary": redone.summary}
+                if redone is not None and redone.by_ai
+                else {"by": "formula", "summary": redone.summary if redone else None}
+            ),
         }
         self._say(
             "fleek",
@@ -327,7 +343,14 @@ class LiveSession:
             f"filters; the vault says a price could work for {len(possible)} (yes or no, never "
             "a number). Ranked on fit, price, seller rating and dispatch.",
         )
-        self.queue = list(ranked)
+        if redone is not None and redone.by_ai:
+            note = (
+                f"Ralph re-ranked the top {min(SHORTLIST, len(ranked))} on the buyer's own words, "
+                f"from public facts only: {redone.summary}"
+            )
+            for side in ("buyer", "fleek"):  # never the seller: it says what the buyer cares about
+                self._say(side, "fleek", note)
+        self.queue = list(final)
         if not self.queue:
             self._say("buyer", "fleek", "No lot can work for you right now, so no agent is called.")
             return
@@ -339,6 +362,35 @@ class LiveSession:
             "Ralph starts with the best match.",
         )
         self._next()
+
+    def _ai_rank(self, ranked: list[Scored]) -> Reranked | None:
+        """Claude's re-rank of the formula's top lots, timed and costed like an agent turn."""
+        if self._rerank is None or len(ranked) < 2:
+            return None
+        started = time.monotonic()
+        out = self._rerank(self.want, ranked, self.sellers)
+        turn, model = out.turn, getattr(self._agents, "model", None)
+        tokens_in = turn.input_tokens if turn else 0
+        tokens_out = turn.output_tokens if turn else 0
+        cost = (
+            cost_microcents(model, tokens_in, tokens_out, self.settings.spending)
+            if model in self.settings.spending.prices
+            else 0
+        )
+        self.metrics.append(
+            {
+                "negotiation": None,
+                "who": "ralph (re-rank)",
+                "model": model or "scripted",
+                "ms": round((time.monotonic() - started) * 1000),
+                "calls": turn.calls if turn else 0,
+                "tokens_in": tokens_in,
+                "tokens_out": tokens_out,
+                "cost_cents": round(cost / 1_000_000, 4),
+                "checks": 0,
+            }
+        )
+        return out
 
     def _next(self) -> bool:
         """Open a negotiation on the best lot not tried yet. False when none is left."""

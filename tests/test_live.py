@@ -192,3 +192,74 @@ def test_metrics_and_the_trace_hold_no_secret() -> None:
     for pence in (*floors, PRESET["buyer"]["top_price"]):
         pounds = f"£{pence // 100}.{pence % 100:02d}"
         assert pounds not in trace and f'"price_pence": {pence},' not in trace, pence
+
+
+class SpyRerank:
+    """Scripted agents, plus a re-rank that keeps the formula's order and keeps what it was sent."""
+
+    def __init__(self) -> None:
+        self.prompts: list[str] = []
+
+    def __call__(self) -> tuple[ScriptedRalph, ScriptedTommy]:
+        return scripted()
+
+    def rerank(self, want: Any, ranked: Any, sellers: Any) -> Any:
+        from fleek_agents.agents.rerank import SHORTLIST, Reranked, describe
+
+        self.prompts.append(describe(want, ranked[:SHORTLIST], sellers))
+        return Reranked(list(ranked), {}, "kept", by_ai=False, turn=None)
+
+
+def test_two_floors_give_the_re_rank_the_same_request_and_no_secret() -> None:
+    first, second = SpyRerank(), SpyRerank()
+    LiveSession(setup(), SETTINGS, first, "test")
+    LiveSession(setup(seller__stock__0__floor=900), SETTINGS, second, "test")
+    assert first.prompts and first.prompts == second.prompts
+    for secret in ("935", "9.35", "900", "9.00", "1550", "15.50"):
+        assert re.search(rf"(?<![0-9.]){re.escape(secret)}(?![0-9])", first.prompts[0]) is None
+
+
+def test_scripted_agents_keep_the_formula_s_order() -> None:
+    live = LiveSession(setup(), SETTINGS, scripted, "test")
+    assert live.funnel["rerank"]["by"] == "formula"
+    ranked = [r for r in live.funnel["rows"] if r["step"] == "ranked"]
+    assert all(r["ai_why"] is None for r in ranked)
+
+
+@pytest.mark.skipif(
+    __import__("os").environ.get("FLEEK_SKIP_MODEL") == "1", reason="needs the local model"
+)
+def test_the_recorded_claude_re_rank_replays_with_a_reason_for_each_lot() -> None:
+    from fleek_agents.bench.episode import TapClient
+    from fleek_agents.live.agents import ClaudePair, cassette
+    from fleek_agents.llm.replay import ReplayClient
+    from fleek_agents.matching.embeddings import LocalEmbedder
+
+    tap = TapClient(ReplayClient(cassette("claude-haiku-5-5")))
+    pair = ClaudePair(tap, "claude-haiku-5-5")
+    live = run(LiveSession(setup(), SETTINGS, pair, "replay", embedder=LocalEmbedder()))
+    assert live.view()["state"] == "pending_approval"
+    assert live.funnel["rerank"]["by"] == "claude"
+    ranked = [r for r in live.funnel["rows"] if r["step"] == "ranked"]
+    assert ranked and all(r["ai_why"] for r in ranked[:5])
+    assert "lot-" not in " ".join(r["ai_why"] for r in ranked[:5])  # named by what they are
+    assert live.metrics[0]["who"] == "ralph (re-rank)" and live.metrics[0]["calls"] >= 1
+    seen = "\n".join(tap.seen)
+    assert "rank_lots" in seen  # the search covers the re-rank too
+    for secret in ("935", "9.35", "1550", "15.50", "1800", "18.00"):
+        pattern = rf"(?<![A-Za-z0-9+/.]){re.escape(secret)}(?![A-Za-z0-9])"
+        assert re.search(pattern, seen) is None, secret
+
+
+def test_ralph_s_ranking_reasons_never_reach_a_seller_s_screen() -> None:
+    from fleek_agents.agents.rerank import Reranked
+
+    class Saying(SpyRerank):
+        def rerank(self, want: Any, ranked: Any, sellers: Any) -> Any:
+            reasons = {s.lot.id: "BUYER-PRIORITY-REASON" for s in ranked}
+            return Reranked(list(ranked), reasons, "BUYER-PRIORITY-SUMMARY", True, None)
+
+    live = run(LiveSession(setup(), SETTINGS, Saying(), "test"))
+    view = live.view()
+    assert "BUYER-PRIORITY-SUMMARY" in json.dumps(view["buyer"])
+    assert "BUYER-PRIORITY" not in json.dumps(view["seller"])
