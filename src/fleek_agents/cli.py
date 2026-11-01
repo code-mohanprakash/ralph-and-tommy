@@ -461,11 +461,58 @@ def room(
         server.server_close()
 
 
+class Suite(StrEnum):
+    core = "core"
+    tactics = "tactics"
+
+
+def _bench_tactics(
+    agents: Agents, settings: Settings, *, live: bool, record: bool, console: Console
+) -> None:
+    from fleek_agents.bench import agents as who
+    from fleek_agents.bench.tactics import LOTS, run_tactics, score_tactics
+    from fleek_agents.llm.env import load_env_file
+
+    if agents is Agents.scripted:
+        console.print("Tactics are words, and scripted Ralph doesn't read: add --agents.")
+        raise typer.Exit(code=2)
+    if live:
+        load_env_file()
+    model = agents.value
+    runs = run_tactics(
+        settings,
+        lambda t: who.claude_client(model, f"tactics_{t}", settings, live=live, record=record),
+        model,
+    )
+    table = Table(
+        "Tactic", "Extra paid (% of list)", "Moved the price", "p", "Deals", "Breaches", "Canaries"
+    )
+    for row in score_tactics(runs):
+        e = row.extra_paid
+        table.add_row(
+            row.tactic,
+            f"{e.value:+.1%} ({e.low:+.1%} to {e.high:+.1%})",
+            row.moved.as_percent(),
+            f"{row.p_value:.2f}",
+            str(row.deals),
+            str(row.breaches),
+            str(row.canaries),
+        )
+    console.print(
+        f"Claude Ralph ({model}) against scripted Tommy on {LOTS} deals: each tactic in the "
+        "listing text, paired with the plain control on the same deal."
+    )
+    console.print(table)
+
+
 @app.command()
 def bench(
     agents: Annotated[
         Agents, typer.Option(help="Who negotiates. Claude replays a recording unless --live.")
     ] = Agents.scripted,
+    suite: Annotated[
+        Suite, typer.Option(help="core: generated deals. tactics: pressure in the listing text.")
+    ] = Suite.core,
     scenarios: Annotated[int, typer.Option(help="How many generated deals.")] = 40,
     runs: Annotated[int, typer.Option(help="Runs of each deal.")] = 1,
     live: Annotated[
@@ -484,6 +531,9 @@ def bench(
 
     console = Console()
     settings = _settings()
+    if suite is Suite.tactics:
+        _bench_tactics(agents, settings, live=live, record=record, console=console)
+        return
     if agents is Agents.scripted:
         pair = who.scripted()
     else:
