@@ -758,6 +758,71 @@ def _leak_through_matching(settings: Settings, privacy: bool, console: Console) 
 
 
 @app.command()
+def monitors(
+    live: Annotated[
+        bool, typer.Option("--live", help="Ask Claude now (needs the key; costs money).")
+    ] = False,
+    record: Annotated[
+        bool, typer.Option("--record", help="With --live: keep the calls as the recording.")
+    ] = False,
+) -> None:
+    """The monitors, scored: what each catches, and how often it flags normal traffic."""
+    from fleek_agents.bench import agents as who
+    from fleek_agents.bench.monitoring import (
+        CLEAN_LISTINGS,
+        TEXT_MODELS,
+        attack_listings,
+        behaviour_report,
+        text_report,
+    )
+    from fleek_agents.bench.tactics import run_tactics
+    from fleek_agents.harness.reader import ListingReader
+    from fleek_agents.llm.env import load_env_file
+
+    console = Console()
+    settings = _settings()
+    haiku = Agents.haiku.value
+    controls = run_tactics(
+        settings,
+        lambda t: who.claude_client(haiku, f"tactics_{t}", settings, live=False, record=False),
+        haiku,
+        tactics=("control",),
+    )["control"]
+    table = Table("Monitor", "Catches", "Attacks", "False alarms", "Normal traffic")
+    for row in behaviour_report(settings, controls):
+        table.add_row(
+            row.flag.value,
+            row.caught.as_percent(),
+            row.attack,
+            row.false_alarms.as_percent(),
+            row.normal,
+        )
+    console.print("Behaviour monitors (plain code), on the bench's attackers and normal traffic.")
+    console.print(table)
+
+    if live:
+        load_env_file()
+    attacks = attack_listings(settings)
+
+    def reader_for(model: str) -> ListingReader:
+        client = who.claude_client(model, "textcheck", settings, live=live, record=record)
+        return ListingReader(client, model=model)
+
+    table = Table("Reader model", *[f"Catches: {name}" for name in attacks], "False alarms")
+    for text in text_report(reader_for, TEXT_MODELS, attacks):
+        table.add_row(
+            text.model,
+            *[text.caught[name].as_percent() for name in attacks],
+            text.false_alarms.as_percent(),
+        )
+    sizes = ", ".join(f"{len(v)} {k}" for k, v in attacks.items())
+    console.print(
+        f"The listing reader as a warning: {sizes}, against {len(CLEAN_LISTINGS)} clean listings."
+    )
+    console.print(table)
+
+
+@app.command()
 def export(
     out: Annotated[str, typer.Option(help="Where to write the run, e.g. viewer/runs/run.json.")],
     db: Annotated[str, typer.Option(help="The deals file.")] = "fleek.db",
