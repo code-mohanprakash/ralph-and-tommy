@@ -16,6 +16,7 @@ from fleek_agents.domain.models import Lot, Market, Want
 from fleek_agents.domain.rules import Candidate, quote
 from fleek_agents.store.market import hard_filter
 from fleek_agents.vault.checks import deal_possible
+from fleek_agents.vault.firm import working_limit
 from fleek_agents.vault.gate import MatchGate
 from fleek_agents.vault.seed import Secrets
 
@@ -41,7 +42,7 @@ def possible_deals(
     kept = []
     for lot in hard_filter(session, want):
         q = quote(lot, sellers[lot.seller_id], bundles=bundles_for(want, lot))
-        limit = secrets.lots[lot.id]
+        limit = working_limit(secrets.lots[lot.id], lot)
         if gate is not None:
             if today is None:
                 raise ValueError("The gate's budget is per day: say which day it is")

@@ -25,6 +25,7 @@ from fleek_agents.store.deals import accept
 from fleek_agents.store.events import EventLog
 from fleek_agents.vault.bands import buyer_band, seller_band
 from fleek_agents.vault.checks import buyer_ok, can_accept, seller_ok
+from fleek_agents.vault.firm import working_limit
 from fleek_agents.vault.mandate import BuyerMandate, SellerMandate
 from fleek_agents.vault.privacy import guarded, jitter
 
@@ -77,8 +78,9 @@ def _inside_own_limit(
 
 def take_step(log: EventLog, deal: Deal, *, clock: FakeClock, settings: Settings) -> bool:
     """One turn of one negotiation. False once it has ended or is waiting for approval."""
-    # With the privacy layer on, Tommy works to his floor plus the lot's secret margin.
-    seller_limit = guarded(deal.seller_limit, settings.privacy)
+    # In firm mode Tommy works to the public firm price. Otherwise, with the privacy layer on,
+    # to his floor plus the lot's secret margin.
+    seller_limit = guarded(working_limit(deal.seller_limit, deal.lot), settings.privacy)
     negotiation_id, lot, buyer_limit = deal.negotiation_id, deal.lot, deal.buyer_limit
     q = quote(lot, deal.seller, bundles=deal.bundles)
     pieces, rules, t = q.pieces, settings.negotiation, settings.bands

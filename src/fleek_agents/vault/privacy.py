@@ -34,8 +34,8 @@ def guarded(limit: SellerMandate, rules: PrivacyRules) -> SellerMandate:
     Drawn once per lot, so every negotiation on the lot sees the same one: a patient attacker
     can't average it away over several visits.
     """
-    if not rules.on or rules.margin_max_pct == 0:
-        return limit
+    if not rules.on or rules.margin_max_pct == 0 or limit.firm_price is not None:
+        return limit  # a firm price hides the floor completely; a margin adds nothing
     floor = limit.floor_per_piece.reveal().value
     basis_points = _rng("margin", limit.lot_id).randint(0, rules.margin_max_pct * 100)
     raised = floor + -(-floor * basis_points // 10_000)  # rounded up: never below the real floor
