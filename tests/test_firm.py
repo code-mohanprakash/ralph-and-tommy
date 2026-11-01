@@ -238,3 +238,13 @@ def test_claude_agents_get_byte_identical_requests_whatever_the_floor() -> None:
     seen = requests(floor)
     assert str(firm) in seen  # the firm price is public, so it's there
     assert requests(floor // 2) == seen
+
+
+def test_the_bench_finds_the_floor_shows_when_haggling_and_never_in_firm_mode() -> None:
+    from fleek_agents.bench.firm import firm_report
+    from fleek_agents.config import Settings
+
+    haggle, *firm = firm_report(Settings(), count=30)
+    assert haggle.floor_shows > 0
+    assert all(row.floor_shows == 0 and row.lots > 0 for row in firm)
+    assert all(row.deals.value < haggle.deals.value for row in firm)  # and it costs deals
