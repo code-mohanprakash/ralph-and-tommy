@@ -41,3 +41,8 @@ def lot_of(session: Session, negotiation_id: str) -> str | None:
 def negotiations_of(session: Session, buyer_id: str) -> list[str]:
     query = select(PairingRow.negotiation_id).where(PairingRow.buyer_id == buyer_id)
     return [n for n in session.scalars(query) if n is not None]
+
+
+def negotiations_for_lot(session: Session, lot_id: str) -> list[str]:
+    query = select(PairingRow.negotiation_id).where(PairingRow.lot_id == lot_id)
+    return [n for n in session.scalars(query) if n is not None]
