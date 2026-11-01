@@ -104,11 +104,11 @@ the log rebuilds each negotiation exactly; the saved state is checked against a 
 | `harness` | The tool loop, strict schemas, the agents' tools, escalation to a person, the quarantined listing reader and blind mode (`reader.py`) |
 | `llm` | The Claude client, model routing, spend caps, record and replay |
 | `agents` | The AI side: the `Agent` interface, Claude Ralph and Tommy, their prompts, picking 3 lots |
-| `scripted` | **No AI.** Ralph and Tommy as plain rules, for tests, CI and the bench: free, the same every run, no key needed. Two Tommy styles (thirds, Boulware). Import contracts keep them apart: they never import the vault, and the Claude agent never imports them |
+| `scripted` | **No AI.** Ralph and Tommy as plain rules, for tests, CI and the bench: free, the same every run, no key needed. Two Ralph styles (best offer; holding, which the Deal Room uses) and two Tommy styles (thirds, Boulware). Import contracts keep them apart: they never import the vault, and the Claude agent never imports them |
 | `humans` | What account managers read: the near-miss call list, the watch list from the monitors, and the summary written whenever a person is needed |
 | `safety` | The naive baseline, attacks, the leak detector and scanner, the safety report |
 | `evals` | The market simulation |
-| `bench` | The deep dive's test bench: generated deals with canary secrets, attackers (moves, matching, words, an adaptive red team), the privacy trade-off sweep, monitor scoring, error bars ([SAFETY_CASE.md](SAFETY_CASE.md)) |
+| `bench` | The deep dive's test bench: generated deals with canary secrets, attackers (moves, matching, words, an adaptive red team), the privacy trade-off sweep and where its lost deals went (`lost.py`), monitor scoring, error bars ([SAFETY_CASE.md](SAFETY_CASE.md)) |
 | `trace` | Exporting a run as JSON |
 | `room` | The Deal Room: a small fixed market, one negotiation through the real code, told as steps; a local web server and the 3D page |
 | `live` | The live demo: the onboarding forms and a ready-made market of 4 sellers (and the check that no secret lands in a box an agent reads), a session run a turn at a time with a view for each side, the matching funnel, per-turn metrics and a trace, a local web server and the page |

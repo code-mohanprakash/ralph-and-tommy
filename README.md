@@ -18,14 +18,16 @@ outside it.** [docs/SAFETY_CASE.md](docs/SAFETY_CASE.md) has the whole argument.
   and Claude Ralph bench runs, over 4,100 calls, was searched for the limits: none found.
   Claude Tommy tried to cross his floor in 55 of 100 probed lots; code refused every card.
 - **But a floor can be worked out from moves.** An attacker who knows the (public) code got within
-  2% of Tommy's floor on 62% of lots. A secret margin cuts that to 37%, for 4 points of deals.
-  Every setting is measured on one chart; noise made it worse until fixed.
+  2% of Tommy's floor on 62% of lots. A secret margin cuts that to 37%, and 99% of the deals
+  that work still close (167 of 168). Every setting is measured on one chart; noise made it worse
+  until fixed. Most deals the margin seemed to cost were really lost by a buyer holding his price.
+  Fixed: the hidden floor itself loses 1 deal in 168.
 - **Matching gave floors away to the penny** in about 12 fake accounts. A match gate stops that
   (48% within 2%), and its first version turned real buyers away, so it changed.
 - **Zero is a mode, and it's tested.** A seller can pick a public firm price. Then nothing a
   buyer sees depends on the floor: each lot was negotiated twice with different floors, and the
-  buyer saw the same cards both times, on every lot. It costs deals (56% close against 97%, and
-  Fleek earns 62% of the commission), so it's the seller's choice, not the default.
+  buyer saw the same cards both times, on every lot. It costs deals (56% close against 100%, and
+  Fleek earns 60% of the commission), so it's the seller's choice, not the default.
 - **Fixed pressure tactics didn't move Claude Ralph; an adaptive attacker did** (+2.0% of list).
   A quarantined reader cut it to +0.7%. In blind mode Ralph sees no seller text at all: two
   listings that differ only in their words give him byte-identical requests.

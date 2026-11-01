@@ -117,7 +117,8 @@ The test bench (`bench/`) copies how the 2026 benchmarks and lab eval guides wor
 |---|---|---|
 | Deals outside a limit: 95% upper bound under 1% | 0 in the 510 recorded Claude negotiations the tests check (200 probed Tommy, 280 tactics, 30 red-team tries), and every scripted suite: upper bound 0.59% | met |
 | Secrets in model text: none | 0 canaries in over 4,100 recorded calls | met |
-| Moves: the strongest attacker's hit rate cut by 40%+, with under 5 points of deals lost | 62% to 37% (a 40.3% cut), 4.1 points lost | met, narrowly |
+| Moves: the strongest attacker's hit rate cut by 40%+, with under 5 points of deals lost | 62% to 37% (a 40.3% cut), 0.6 points lost (4.1 before Ralph's best offer, #91) | met |
+| Deals: with the margin on, 99% of deals that work close (set 1 Nov, #91) | 167 of 168; the one lost is lost to the hidden floor, none in the haggling | met |
 | Matching: more than 100 fake accounts needed to pin a floor within 2% | 12 accounts land within 2% on 48% of lots | **missed** |
 
 ### T1 and T5: secrets in model text, and deals outside a limit
@@ -152,8 +153,22 @@ closed: 100 lots for attacks, 200 more for deals.
 ![trade-off](img/privacy-tradeoff.svg)
 
 **Chosen: an 8% secret margin, no noise.** It's the only setting that met both pass marks: the
-strongest attacker's hit rate falls **62% to 37%**, a 40% cut, with **4 points** of deals lost
-(97% to 93%). It passed narrowly.
+strongest attacker's hit rate falls **62% to 37%**, a 40% cut. Deals closed: **100% to 99%**
+(167 of 168 that work).
+
+**Where the deals went (#91).** The first measure said the margin cost 4 points (97% to 93%). A
+lost-deal report then sorted every lost deal. With the margin on, 11 of the 12 were lost in the
+haggling, not to the floor: scripted Ralph held his offer when halfway was past his limit, and
+the rounds ran out. Now he offers the highest price inside his limit, and his last card is his
+best. Lost deals fell to 1 in 168, and that one is lost to the hidden floor (the buyer's top sat
+between the real floor and the raised one). The attacker's numbers don't change: it plays the
+buyer itself. The cost moved to the buyer: their share of the room fell from 37% to 27% with the
+margin on, because Ralph gives more on his last card.
+
+**Not built: a last call against the real floor.** Before walking away, the vault could check
+the buyer's final offer against the real floor, not the raised one. It would save that 1 deal in
+168, but a "no" costs the buyer nothing and tells them the real floor is higher than their offer.
+A few such answers give back what the margin hides. Not worth it for 1 deal in 168.
 
 **What the sweep taught:**
 1. **Clamping noise onto the floor made the leak worse** (62% to 75%): counters piled up exactly
@@ -161,9 +176,11 @@ strongest attacker's hit rate falls **62% to 37%**, a 40% cut, with **4 points**
 2. **Noise never helped** against an attacker who knows the code. The one-way rule caps upward
    noise, so on average noise pushes counters toward the floor.
 3. **A secret margin of M% caps any attacker's 2% hit rate at about 4/M**, and each point of
-   margin costs deals. You can't hide a floor you act on for free.
-4. **Boulware Tommy**, who gives little until the deadline, is the cheapest cut (62% to 46% for
-   about one point of deals), but not enough on its own.
+   margin costs something. You can't hide a floor you act on for free: with a buyer who makes
+   his best offer, the cost is mostly the buyer's share of the room, not lost deals.
+4. **Boulware Tommy**, who gives little until the deadline, is a cut that costs no deals (62% to
+   46%), but not enough on its own. With a 6% margin it also passes both marks (34%, 100% of
+   deals); its interval overlaps the chosen setting's, so the default stays thirds with 8%.
 
 **With Claude Tommy** (100 lots, recorded; 40 until the re-recording in #89):
 
@@ -216,15 +233,15 @@ compared card for card:
 
 | Mode, 200 lots | Lots | Deals closed | Fleek's commission | Floor changed what the buyer saw |
 |---|---|---|---|---|
-| Haggle | 200 | 97% (94% to 99%) | 100% | 87 of 200 lots |
-| Firm at 80% of list | 127 | 66% (58% to 75%) | 70% of haggling | **0 of 127** |
-| Firm at 85% of list | 165 | 62% (54% to 71%) | 67% | **0 of 165** |
-| Firm at 90% of list | 200 | 56% (48% to 63%) | 62% | **0 of 200** |
+| Haggle | 200 | 100% (100% to 100%) | 100% | 91 of 200 lots |
+| Firm at 80% of list | 127 | 66% (58% to 75%) | 68% of haggling | **0 of 127** |
+| Firm at 85% of list | 165 | 62% (54% to 71%) | 64% | **0 of 165** |
+| Firm at 90% of list | 200 | 56% (48% to 63%) | 60% | **0 of 200** |
 
 - **The buyer's view carries nothing about the floor**, beyond "it's at or below the firm price",
   which the seller chose to publish. The same holds for matching's answer, and for Claude: two
   floors give byte-identical model requests (`tests/test_firm.py`).
-- **It costs about 40 points of deals** on these lots. Fleek earns 15% of every delivered order,
+- **It costs about 44 points of deals** on these lots. Fleek earns 15% of every delivered order,
   so more deals matter more than higher prices: haggling earns Fleek more. Firm mode is the
   seller's choice for lots where secrecy matters more than speed.
 - A lot whose floor is above the firm price can't use it. The vault refuses, and tells only the
@@ -276,10 +293,10 @@ about a few other lots slips past it, and then only the gate's grid and budget r
 ## 6. What's still open
 
 - **Haggling reveals something; only firm mode reveals nothing.** The margin caps what an
-  attacker learns from a haggle and costs a few deals; firm mode makes it zero and costs about 40
-  points of deals. Which lots use which is a business choice, best made on Fleek's own data.
+  attacker learns from a haggle and costs 1 deal in 168 on the bench; firm mode makes it zero and
+  costs about 44 points of deals. Which lots use which is a business choice, best made on Fleek's own data.
 - **The margin costs more on the seeded market than on the bench.** It loses about 10% of real
-  matches, against 4 points of deals on the bench. That's a reason to test it on past deals
+  matches, against 1 deal in 168 on the bench. That's a reason to test it on past deals
   before turning it on.
 - **Matching still lands within 2% on about half of lots** with a 5% grid. A 10% grid halves
   that, for more lost matches.
