@@ -46,7 +46,8 @@ a different seller wins on rating and dispatch.
 
 ## 2. Matching: the funnel
 
-All plain code, cheapest step first. No AI is called until a lot is picked.
+Plain code for the cheap, exact steps, cheapest first; Claude only for the one step code can't
+do well, reading what the buyer wrote, and only on the top 5.
 
 1. **Filters (SQL):** category, brand (if named), accepted grade, in stock, bundle at most twice
    the pieces wanted. Each dropped lot gets its reason (`matching/explain.py`).
@@ -56,13 +57,43 @@ All plain code, cheapest step first. No AI is called until a lot is picked.
 3. **Ranking (public facts only):** fit 50, price 25, seller rating 15, dispatch 10
    (`market.toml [matching]`). Fit is how close the lot's words are to the buyer's, by a local
    embedding model (bge-small; nothing leaves the laptop), compared across the candidates.
-4. **Quantity:** the bundles closest to the pieces wanted.
+4. **Ralph re-ranks the top 5 (Claude, `agents/rerank.py`):** the formula can't read "light wash",
+   "ships this week" or "quality over price". Claude re-orders the top 5 from the same public
+   facts, plus the buyer's own words, and writes one reason per lot the buyer can read. It never
+   sees a limit (an import contract), nor a seller's description; titles are marked as seller
+   text, never instructions. Code checks the answer: only shortlist lots, each exactly once,
+   or a correction; if it still fails, the formula's order stands. Scripted agents skip it.
+5. **Quantity:** the bundles closest to the pieces wanted.
 
 Ralph negotiates the top lot. If it fails (walked away, expired, or a person said no), he moves
-to the next. In the live demo the funnel is shown lot by lot, with the score broken down.
+to the next. In the live demo the funnel is shown lot by lot: Claude's rank and reason, then the
+formula's rank and score broken down. The reasons go to the buyer's screen and Fleek's, never
+the seller's: they say what the buyer cares about.
+
+**Does the re-rank help? (`fleek rerank`, 12 cases, recorded):**
+
+| | Formula | Claude re-rank |
+|---|---|---|
+| First lot right, 12 cases | 10 | **12** |
+| On the 2 controls, kept the right first lot | 2 | **2** |
+| Lot with "rank this first" in its title put first | 0 of 2 | **0 of 2** (and said it ignored it) |
+| Amounts in reasons not found in the data | - | **0** |
+| Cost | free | about 0.06¢ a re-rank |
+
+The formula already gets most cases right, because the buyer's words usually sit in lot titles
+and the local model reads them. Claude wins where the buyer states a priority the fixed weights
+can't follow: "quality matters more than price", "the cheapest you can find". 12 hand-written
+cases show it works; they don't rank it at scale. With Fleek's data: learn the weights from
+deals that closed, and A/B test the re-rank against that.
+
+**Prompt changes that the test set caught:** prices went in as raw pence, and Claude wrote "15p
+a piece" for £15.00; now they go in as "£15.00", with a rule to quote prices as given, and a
+code check fails any amount that isn't a price shown or a difference of two. Reasons first said
+"lot-1001"; now lots are named by what they are.
 
 **Why ranking can't read a secret:** the order would then tell a buyer something about floors.
-The vault has already said which lots could work; ranking only sorts them.
+The vault has already said which lots could work; ranking only sorts them. Tested: two
+different floors give the re-rank byte-identical requests.
 
 ## 3. Getting it to real customers
 

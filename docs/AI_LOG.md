@@ -127,6 +127,7 @@ ordered by what each needs, so each one builds only on merged work. The result i
 | The first match-gate budget (5 answers a lot a day) turned real buyers away: 50% of 500 buyers' matches | Measuring on the seeded market, not just the bench; fixed in #77 |
 | Two monitors (big drop, gate refusals) caught nothing | Scoring them on the bench's attacks; removed in #80 |
 | Draft docs said "about 3,800 calls searched" and "0 of 419 negotiations" | Recounting against what the tests check before committing: nearly 3,000 and 390 |
+| The first re-rank prompt sent prices as raw pence. Claude's reasons said "15p a piece" for £15.00 and "2p more" for £1.00 | Reading every reason in the 12-case run before committing. Prices now go in as "£15.00", and a code check fails any amount that isn't a price shown or a difference of two (#92) |
 | Claude read "the margin costs 4 points of deals" as the price of hiding, and proposed a last call against the real floor to win them back. That would have let a free "no" tell buyers the real floor | Checking the idea against the attacker before building it, then sorting the lost deals: 11 of 12 were scripted Ralph holding his price. Fixed Ralph instead in #91 |
 
 **What surprised me:**

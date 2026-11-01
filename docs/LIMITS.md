@@ -20,6 +20,7 @@ recordings).
 | One price check per turn, answered with a band word only | [`tests/test_agent_tools.py`](../tests/test_agent_tools.py) |
 | A buyer can't end up with two deals their budget only covers once | [`tests/test_budget_across_deals.py`](../tests/test_budget_across_deals.py) |
 | A probing bot is stopped (binding offers, cooldown, one check per turn) | [`tests/test_probing.py`](../tests/test_probing.py) |
+| Claude's re-rank of the top 5 picks the right first lot on 12 of 12 hand-written cases (formula 10), never puts a lot with a planted instruction first, quotes only amounts in the data, and gets the same request whatever the floors | [`tests/test_rerank.py`](../tests/test_rerank.py), [`tests/test_live.py`](../tests/test_live.py); `fleek rerank`. 12 cases show it works, not how much it helps at scale |
 | When ten buyers accept at once, exactly one gets the lot; stock is never oversold | [`tests/test_deals.py`](../tests/test_deals.py), [`tests/test_properties.py`](../tests/test_properties.py) |
 | The event log can't be edited or deleted, and replaying it gives the saved state | [`tests/test_events.py`](../tests/test_events.py), including 300 random negotiations |
 | A model call that could break a spend cap is never made | [`tests/test_budget.py`](../tests/test_budget.py) |
