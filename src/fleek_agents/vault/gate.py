@@ -36,6 +36,7 @@ class MatchGate:
     _answers: dict[tuple[str, int], bool] = field(default_factory=dict)  # (lot, step): answer
     _spent: dict[tuple[str, date], int] = field(default_factory=dict)  # (lot, day): answers
     refused: int = 0  # questions turned away because the budget was spent
+    refused_lots: set[str] = field(default_factory=set)  # lots with a question turned away
 
     def step(self, quote: Quote) -> int:
         """The size of one grid step for this lot, in pence per piece delivered."""
@@ -54,6 +55,7 @@ class MatchGate:
         day = (seller.lot_id, today)
         if self._spent.get(day, 0) >= self.rules.answers_per_lot_per_day:
             self.refused += 1
+            self.refused_lots.add(seller.lot_id)
             return False  # whatever the truth, so the refusal says nothing
         self._spent[day] = self._spent.get(day, 0) + 1
         coarse = BuyerMandate(
@@ -62,3 +64,7 @@ class MatchGate:
         answer = deal_possible(coarse, guarded(seller, self.privacy), quote)
         self._answers[key] = answer
         return answer
+
+    def asked_lots(self) -> set[str]:
+        """Every lot with at least one question answered or refused."""
+        return {lot for lot, _ in self._answers} | self.refused_lots
