@@ -57,6 +57,7 @@ uv run fleek negotiate --mock --buyer buyer-0002 --db fleek.db  # keep the deal 
 uv run fleek approvals --db fleek.db                            # ...see what waits for a person
 uv run fleek digest --db fleek.db                               # the account managers' call list
 uv run fleek summary neg-0001 --db fleek.db                     # what happened, and what to do
+uv run fleek bench                                              # 40 generated deals, scored with 95% intervals
 ```
 
 To run Claude live, put an Anthropic key in `.env` (copy `.env.example`) and add `--live` to

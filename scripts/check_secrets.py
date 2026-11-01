@@ -1,12 +1,14 @@
 """Block commits that contain an API key.
 
 pre-commit passes the staged files as arguments. If any of them holds something
-that looks like an Anthropic API key, this prints the file and line and exits
+that looks like an Anthropic API key (compressed
+files are opened and scanned too), this prints the file and line and exits
 with 1, which stops the commit. It never prints the key itself.
 
 This guards the one secret this project has. It is not a general secret scanner.
 """
 
+import gzip
 import re
 import sys
 from pathlib import Path
@@ -31,7 +33,11 @@ def lines_with_keys(text: str) -> list[int]:
 def main(paths: list[str]) -> int:
     found = False
     for path in paths:
-        text = Path(path).read_text(encoding="utf-8", errors="ignore")
+        file = Path(path)
+        if file.suffix == ".gz":  # compressed recordings are scanned as their text
+            text = gzip.decompress(file.read_bytes()).decode("utf-8", errors="ignore")
+        else:
+            text = file.read_text(encoding="utf-8", errors="ignore")
         for number in lines_with_keys(text):
             print(f"{path}:{number}: looks like an API key. Keep keys only in .env.")
             found = True

@@ -5,19 +5,29 @@ response exactly as the API returned it. Replaying looks a request up by its fin
 a prompt, tool or setting changes, the old recording no longer matches and the test says so,
 rather than quietly replaying an answer to a different question.
 
+A cassette whose name ends in .gz is compressed (the bench records hundreds of calls).
+
 Requests never contain the API key (the SDK sends it as a header), and the key scan runs on
 cassettes like every other committed file.
 """
 
+import gzip
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import IO, Any
 
 from anthropic.types.beta import BetaMessage
 
 from fleek_agents.llm.client import LiveClient, LLMClient
+
+
+def _open(cassette: Path, mode: str) -> IO[str]:
+    if cassette.suffix == ".gz":
+        return io.TextIOWrapper(gzip.GzipFile(cassette, mode + "b"), encoding="utf-8")
+    return cassette.open(mode, encoding="utf-8")
 
 
 class CassetteMiss(Exception):
@@ -35,7 +45,8 @@ class RecordingClient:
     def __init__(self, inner: LLMClient, cassette: Path) -> None:
         self._inner, self._cassette = inner, cassette
         cassette.parent.mkdir(parents=True, exist_ok=True)
-        cassette.write_text("")  # a recording replaces the old one
+        with _open(cassette, "w"):
+            pass  # a recording replaces the old one
 
     def create(self, **params: Any) -> BetaMessage:
         response = self._inner.create(**params)
@@ -44,7 +55,7 @@ class RecordingClient:
             "model": params["model"],
             "response": response.model_dump(mode="json"),
         }
-        with self._cassette.open("a", encoding="utf-8") as file:
+        with _open(self._cassette, "a") as file:
             file.write(
                 json.dumps(line) + "\n"
             )  # not sorted: the response stays exactly as returned
@@ -56,7 +67,9 @@ class ReplayClient:
 
     def __init__(self, cassette: Path) -> None:
         self._answers: dict[str, list[dict[str, Any]]] = {}
-        for raw in cassette.read_text(encoding="utf-8").splitlines():
+        with _open(cassette, "r") as file:
+            lines = file.read().splitlines()
+        for raw in lines:
             line = json.loads(raw)
             self._answers.setdefault(line["request"], []).append(line["response"])
 

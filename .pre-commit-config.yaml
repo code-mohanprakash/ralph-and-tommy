@@ -6,4 +6,4 @@ repos:
         name: block API keys
         entry: python scripts/check_secrets.py
         language: python
-        types: [text]
+        types_or: [text, gzip]
