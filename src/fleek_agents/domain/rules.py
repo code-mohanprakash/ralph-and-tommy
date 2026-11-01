@@ -5,6 +5,7 @@ from typing import Annotated
 from pydantic import Field, StrictInt
 
 from fleek_agents.domain.models import DomainModel, Lot, LotId, PenceField, Seller
+from fleek_agents.domain.money import Pence
 
 
 class Quote(DomainModel):
@@ -40,6 +41,14 @@ def quote(lot: Lot, seller: Seller, bundles: int) -> Quote:
         shipping=lot.shipping,
         total=(base_price + lot.shipping).times(pieces),
     )
+
+
+def walkaway_offer_price(lot: Lot) -> Pence | None:
+    """The base price per piece offered to buyers who walked away: public, rounded down to 5p."""
+    if lot.walkaway_offer_pct is None:
+        return None
+    price = lot.base_price.value * (100 - lot.walkaway_offer_pct) // 100
+    return Pence(price - price % 5)
 
 
 class Candidate(DomainModel):

@@ -36,6 +36,10 @@ class ScriptedRalph:
 
     def decide(self, view: View) -> Action:
         counter, firm = view.on_table, view.lot.firm_price
+        if view.promised is not None and counter is None:  # the seller's offer: take it or not
+            if view.band(view.promised) in INSIDE:
+                return Send(terms=_terms(view, view.promised))
+            return WalkAway()
         if firm is not None:
             if counter is not None and view.band(counter.base_price) in INSIDE:
                 return Accept()

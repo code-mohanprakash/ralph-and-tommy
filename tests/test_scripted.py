@@ -128,6 +128,7 @@ def test_an_agent_s_view_holds_no_secret_field() -> None:
         "band",
         "today",
         "elsewhere",
+        "promised",  # the seller's public offer to a buyer who walked away
     }
 
 

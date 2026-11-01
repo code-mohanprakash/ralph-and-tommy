@@ -53,6 +53,7 @@ class View:
     band: Callable[[Pence], Band]  # how a price sits against *my own* limit
     today: date
     elsewhere: tuple[str, ...] = ()  # the buyer's other open deals, one line each (buyer only)
+    promised: Pence | None = None  # the seller's standing offer to this buyer, if they sent one
 
     @property
     def on_table(self) -> OfferCard | None:
