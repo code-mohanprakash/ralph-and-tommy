@@ -50,11 +50,23 @@ function addLot(values = {}) {
   const firm = $(".firm", node);
   $$('input[type="radio"]', node).forEach((r) =>
     r.addEventListener("change", () => (firm.hidden = r.value !== "firm" || !r.checked)));
-  $(".remove", node).addEventListener("click", () => {
+  $(".remove", node).addEventListener("click", (event) => {
+    event.preventDefault(); // the button sits in the summary: don't fold the lot as well
     if ($$(".lot-form").length > 1) node.remove();
   });
   $("#stock").append(node);
   fillLot(node, values);
+  const summary = () => {
+    const title = $('[name="title"]', node).value || `Lot ${n}`;
+    const price = $('[name="list_price"]', node).value;
+    const mode = $$('input[type="radio"]', node).find((r) => r.checked).value;
+    $(".lot-summary", node).textContent =
+      `${title}${price ? ` · £${price} a piece` : ""}${mode === "firm" ? " · firm price" : ""}`;
+  };
+  node.addEventListener("input", summary);
+  node.addEventListener("change", summary);
+  summary();
+  node.open = !values.title; // a new, empty lot opens; ready-made ones stay folded
 }
 
 function fillLot(node, v) {
@@ -70,6 +82,16 @@ function fillLot(node, v) {
   $(".firm", node).hidden = mode !== "firm";
 }
 
+function fillBuyer(b) {
+  const f = $("#form");
+  f.buyer_name.value = b.name; f.buyer_kind.value = b.kind; f.buyer_country.value = b.country;
+  f.buyer_category.value = b.category; f.buyer_brands.value = (b.brands || []).join(", ");
+  f.buyer_pieces.value = b.pieces; f.buyer_notes.value = b.notes || "";
+  f.buyer_top.value = pounds(b.top_price);
+  $$('[name="grade_ok"]').forEach((c) => (c.checked = b.grades.includes(c.value)));
+  $$('[name="buyer_final_say"]').forEach((r) => (r.checked = r.value === b.final_say));
+}
+
 function fill(preset) {
   const f = $("#form");
   f.seller_name.value = preset.seller.name;
@@ -78,13 +100,8 @@ function fill(preset) {
   $("#stock").replaceChildren();
   lotCount = 0;
   preset.seller.stock.forEach((lot) => addLot(lot));
-  const b = preset.buyer;
-  f.buyer_name.value = b.name; f.buyer_kind.value = b.kind; f.buyer_country.value = b.country;
-  f.buyer_category.value = b.category; f.buyer_brands.value = (b.brands || []).join(", ");
-  f.buyer_pieces.value = b.pieces; f.buyer_notes.value = b.notes || "";
-  f.buyer_top.value = pounds(b.top_price);
-  $$('[name="grade_ok"]').forEach((c) => (c.checked = b.grades.includes(c.value)));
-  $$('[name="buyer_final_say"]').forEach((r) => (r.checked = r.value === b.final_say));
+  fillBuyer(preset.buyer);
+  $("#buyer-pick").value = "0";
 }
 
 function collect() {
@@ -135,6 +152,8 @@ function stepValid() {
   for (const input of $$("input[required], select[required]", fs)) {
     if (!input.closest("[hidden]") && !input.value.trim()) {
       showError(`Fill in: ${input.closest("label").firstChild.textContent.trim()}`);
+      const lot = input.closest("details");
+      if (lot) lot.open = true;
       input.focus();
       return false;
     }
@@ -307,7 +326,11 @@ async function init() {
   options.agents.forEach((a, i) => choice.append(el("label", {},
     el("input", { type: "radio", name: "agents", value: a.key, ...(i === 0 ? { checked: "" } : {}) }),
     document.createTextNode(` ${a.label}`))));
-  addLot();
+  const pick = $("#buyer-pick");
+  options.buyers.forEach((b, i) => pick.append(el("option", { value: String(i), text: `${b.name}: ${b.category}` })));
+  pick.append(el("option", { value: "own", text: "My own (type below)" }));
+  pick.addEventListener("change", () => { if (pick.value !== "own") fillBuyer(options.buyers[Number(pick.value)]); });
+  fill(options.preset);
   $("#add-lot").addEventListener("click", () => addLot());
   $("#use-preset").addEventListener("click", () => fill(options.preset));
   $("#next").addEventListener("click", () => { if (stepValid()) showStep(step + 1); });

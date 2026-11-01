@@ -1,4 +1,5 @@
 import json
+import re
 from collections.abc import Iterator
 from typing import Any
 
@@ -51,7 +52,7 @@ def test_a_secret_typed_where_an_agent_reads_is_refused() -> None:
 
 def test_a_firm_price_or_an_offer_below_the_floor_is_refused_to_the_seller() -> None:
     with pytest.raises(FormError, match="floor"):
-        build(setup(seller__stock__1__firm_price=1500), SETTINGS)
+        build(setup(seller__stock__2__firm_price=900), SETTINGS)  # Wrangler: floor £8.10
     with pytest.raises(FormError, match="floor"):
         build(setup(seller__stock__0__walkaway_offer_pct=40), SETTINGS)
 
@@ -133,5 +134,8 @@ def test_the_recorded_claude_session_replays_and_no_secret_reaches_the_model() -
     assert live.view()["state"] == "pending_approval"
     seen = "\n".join(tap.seen)
     assert "get_lot" in seen  # the search covers what the model was sent and said
+    # Whole numbers only: a digit run inside an opaque token (a signature, an id) isn't a number.
     for secret in ("935", "9.35", "1550", "15.50", "1800", "18.00"):
-        assert secret not in seen, secret
+        pattern = rf"(?<![A-Za-z0-9+/.]){re.escape(secret)}(?![A-Za-z0-9])"
+        assert re.search(pattern, seen) is None, secret
+    assert re.search(r"(?<![A-Za-z0-9+/.])1400(?![A-Za-z0-9])", seen)  # it finds the list price

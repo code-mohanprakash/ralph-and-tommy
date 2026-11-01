@@ -46,7 +46,9 @@ button.bad { border-color: var(--bad); color: var(--bad); }
 form fieldset.step { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); padding: 16px; margin: 0 0 12px; }
 legend { font-weight: 600; padding: 0 6px; }
 fieldset.step > h2 { margin: 16px 0 8px; }
-.lot-form { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; margin: 0 0 12px; background: var(--bg); }
+.lot-form { border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; margin: 0 0 8px; background: var(--bg); }
+.lot-form > summary { cursor: pointer; font-size: 14px; display: flex; justify-content: space-between; gap: 8px; margin: 0; }
+.lot-form[open] > summary { margin-bottom: 10px; }
 label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 500; }
 input, select, textarea { border: 1px solid var(--strong); border-radius: 8px; padding: 7px 9px; background: var(--card); font-size: 14px; font-weight: 400; }
 textarea { resize: vertical; }
@@ -121,3 +123,4 @@ summary { cursor: pointer; font-size: 13px; font-weight: 600; margin-bottom: 8px
   .grid.two, .grid.three, .grid.four { grid-template-columns: 1fr; }
   .grid .wide { grid-column: auto; }
 }
+.pick { margin-bottom: 12px; max-width: 420px; }

@@ -26,9 +26,10 @@
       <li data-step="2">2 · What the buyer wants</li>
       <li data-step="3">3 · Who negotiates</li>
     </ol>
-    <p class="intro">Each side types in its own part. The two secret numbers (the seller's floor
-      and the buyer's top price) go to Fleek's vault only: no AI ever sees them.
-      <button class="link" id="use-preset" type="button">Fill in a ready-made example</button></p>
+    <p class="intro">A ready-made market is filled in: one seller with 10 lots, and a buyer. Change
+      anything you like. The two secret numbers (the seller's floor and the buyer's top price) go to
+      Fleek's vault only: no AI ever sees them.
+      <button class="link" id="use-preset" type="button">Reset to the ready-made market</button></p>
 
     <form id="form" novalidate>
       <fieldset class="step" data-step="1">
@@ -49,6 +50,8 @@
 
       <fieldset class="step" data-step="2" hidden>
         <legend>You're the buyer</legend>
+        <label class="pick">Pick a ready-made buyer, or type your own
+          <select id="buyer-pick"></select></label>
         <div class="grid three">
           <label>Shop name<input name="buyer_name" required maxlength="80"></label>
           <label>Kind of buyer
@@ -142,8 +145,8 @@
 </main>
 
 <template id="lot-template">
-  <fieldset class="lot-form">
-    <legend>Lot <span data-n></span> <button type="button" class="link remove">remove</button></legend>
+  <details class="lot-form">
+    <summary><span class="lot-summary">Lot <span data-n></span></span> <button type="button" class="link remove">remove</button></summary>
     <div class="grid three">
       <label class="wide">Title<input name="title" required maxlength="80"></label>
       <label>Brand<input name="brand" required></label>
@@ -179,7 +182,7 @@
         <label>Offer to buyers who walk away, % off <span class="muted small">(public)</span><input name="walkaway_offer_pct" type="number" min="1" max="50"></label>
       </div>
     </details>
-  </fieldset>
+  </details>
 </template>
 
 <script src="/static/live.js"></script>

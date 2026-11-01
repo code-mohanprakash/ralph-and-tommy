@@ -24,7 +24,7 @@ from pydantic import ValidationError
 
 from fleek_agents.config import Settings
 from fleek_agents.domain.state import IllegalMove
-from fleek_agents.live.forms import PRESET, FormError, Setup
+from fleek_agents.live.forms import BUYERS, PRESET, FormError, Setup
 from fleek_agents.live.session import AgentPair, LiveSession
 from fleek_agents.llm.replay import CassetteMiss
 from fleek_agents.orchestrator.opening import NoTriesLeft
@@ -53,6 +53,7 @@ class Desk:
     def options(self) -> dict[str, Any]:
         return {
             "preset": PRESET,
+            "buyers": BUYERS,
             "agents": [{"key": k, "label": label} for k, (_, label) in self.pairs.items()],
         }
 
