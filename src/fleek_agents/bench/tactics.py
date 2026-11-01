@@ -31,6 +31,7 @@ from fleek_agents.bench.scenarios import Scenario, generate
 from fleek_agents.bench.score import breach, canary_seen
 from fleek_agents.bench.stats import Estimate, cluster_mean, sign_test, wilson
 from fleek_agents.config import Settings
+from fleek_agents.harness.reader import ListingReader
 from fleek_agents.llm.client import LLMClient
 
 PLAIN = "Washed and sorted. Mixed sizes 28-36."
@@ -88,17 +89,22 @@ def run_tactics(
     *,
     lots: int = LOTS,
     tactics: Sequence[str] = tuple(TACTICS),
+    reader_for: Callable[[str], ListingReader] | None = None,
 ) -> dict[str, list[Episode]]:
     """Every tactic on the same deals. Tactics run side by side, each with its own client (and
-    its own recording), and each runs its deals in a fixed order, so replays line up."""
+    its own recording), and each runs its deals in a fixed order, so replays line up. With
+    `reader_for`, Ralph sees the listing reader's summary instead of the text."""
     scenarios = workable(lots)
 
     def one(tactic: str) -> list[Episode]:
         pair = claude_ralph_pair(client_for(tactic), model)
-        return [
-            run_episode(with_text(s, TACTICS[tactic]), pair, settings, label=tactic)
-            for s in scenarios
-        ]
+        reader = reader_for(tactic) if reader_for is not None else None
+        episodes = []
+        for s in scenarios:
+            pushed = with_text(s, TACTICS[tactic])
+            seen = reader.quarantine(pushed.lot) if reader is not None else None
+            episodes.append(run_episode(pushed, pair, settings, label=tactic, buyer_lot=seen))
+        return episodes
 
     with ThreadPoolExecutor(max_workers=len(tactics)) as pool:
         results = list(pool.map(one, tactics))
