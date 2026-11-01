@@ -56,6 +56,9 @@ list_size = 20
 # Measured with `fleek leak --privacy` and `fleek leak --sweep`.
 # Off here because the recorded Claude runs (Deal Room, simulate, safety) were made without it,
 # and a replay only answers the exact requests it saw. The bench turns it on.
+# Chosen from the sweep (1 Nov): the only setting that met both marks set before measuring
+# (strongest attacker's hit rate cut by 40%+, fewer than 5 points of deals lost). Noise is 0:
+# measured, it never helped against an attacker who knows the code.
 on = false
-margin_max_pct = 4
-noise_pct = 4
+margin_max_pct = 8
+noise_pct = 0

@@ -507,6 +507,18 @@ def leak(
     tommy: Annotated[
         Agents, typer.Option(help="Which Tommy to attack. Claude replays unless --live.")
     ] = Agents.scripted,
+    privacy: Annotated[
+        bool, typer.Option("--privacy", help="Turn on the privacy layer, as set in market.toml.")
+    ] = False,
+    boulware: Annotated[
+        bool, typer.Option("--boulware", help="Scripted Tommy holds firm until the deadline.")
+    ] = False,
+    sweep: Annotated[
+        bool, typer.Option("--sweep", help="Measure every setting and draw the trade-off chart.")
+    ] = False,
+    chart_file: Annotated[
+        Path, typer.Option("--chart", help="Where --sweep writes its chart.")
+    ] = Path("docs/img/privacy-tradeoff.svg"),
     live: Annotated[
         bool, typer.Option("--live", help="Ask Claude now (needs the key; costs money).")
     ] = False,
@@ -515,19 +527,58 @@ def leak(
     ] = False,
 ) -> None:
     """How close attackers get to Tommy's secret floor from his moves alone."""
+    from fleek_agents.agents.scripted import BoulwareTommy, ScriptedTommy
     from fleek_agents.bench import agents as who
-    from fleek_agents.bench.moves import NEAR_PCT, claude_tommy, moves_report, scripted_tommy
+    from fleek_agents.bench.moves import (
+        CLAUDE_LOTS,
+        NEAR_PCT,
+        boulware_tommy,
+        claude_tommy,
+        moves_report,
+    )
+    from fleek_agents.bench.moves import scripted_tommy as thirds_tommy
     from fleek_agents.llm.env import load_env_file
 
     console = Console()
     settings = _settings()
+    if sweep:
+        from fleek_agents.bench.tradeoff import chart
+        from fleek_agents.bench.tradeoff import sweep as measure_all
+
+        points = measure_all(settings, progress=lambda s: console.print(f"  measuring {s}"))
+        table = Table("Setting", "Strongest attacker", "Within 2%", "Deals closed", "Passes")
+        for point in points:
+            table.add_row(
+                point.label,
+                point.strongest.attacker,
+                point.strongest.within.as_percent(),
+                point.deals.as_percent(),
+                "yes" if point.passes(points[0]) else "no",
+            )
+        console.print(table)
+        chart_file.parent.mkdir(parents=True, exist_ok=True)
+        chart_file.write_text(chart(points), encoding="utf-8")
+        console.print(f"Chart written to {chart_file}.")
+        return
+    if privacy:
+        rules = settings.privacy.model_copy(update={"on": True})
+        settings = settings.model_copy(update={"privacy": rules})
     if tommy is Agents.scripted:
-        rows = moves_report(settings, tommy=scripted_tommy)
+        if boulware:
+            rows = moves_report(settings, tommy=boulware_tommy, model=BoulwareTommy)
+        else:
+            rows = moves_report(settings, tommy=thirds_tommy, model=ScriptedTommy)
     else:
         if live:
             load_env_file()
-        client = who.claude_client(tommy.value, "moves", settings, live=live, record=record)
-        rows = moves_report(settings, tommy=claude_tommy(client, tommy.value), replayable=False)
+        suite = "moves_private" if privacy else "moves"
+        client = who.claude_client(tommy.value, suite, settings, live=live, record=record)
+        rows = moves_report(
+            settings,
+            tommy=claude_tommy(client, tommy.value),
+            replayable=False,
+            lots=CLAUDE_LOTS,
+        )
     table = Table(
         "Attacker", f"Guess within {NEAR_PCT}% of the floor", "Typical error", "Error removed"
     )
@@ -538,7 +589,14 @@ def leak(
             f"{row.median_error_pct:.1f}%",
             f"{row.gain:.0%}",
         )
-    console.print(f"Attacking {tommy.value} Tommy on {rows[0].within.n} lots, by moves only.")
+    layer = (
+        f"privacy layer on (margin up to {settings.privacy.margin_max_pct}%, "
+        f"noise {settings.privacy.noise_pct}%)"
+        if settings.privacy.on
+        else "privacy layer off"
+    )
+    lots = rows[0].within.n
+    console.print(f"Attacking {tommy.value} Tommy on {lots} lots, by moves only; {layer}.")
     console.print(table)
     console.print(
         f"Knowing only the list price, the typical error is {rows[0].prior_median_error_pct:.1f}%."

@@ -2,6 +2,7 @@ import os
 from collections import Counter
 
 import pytest
+from typer.testing import CliRunner
 
 from fleek_agents.agents.scripted import BoulwareTommy, ScriptedRalph, ScriptedTommy
 from fleek_agents.bench.episode import TapClient
@@ -15,6 +16,8 @@ from fleek_agents.bench.moves import (
 from fleek_agents.bench.run import run_suite
 from fleek_agents.bench.scenarios import PIECES, Scenario, generate
 from fleek_agents.bench.score import breach
+from fleek_agents.bench.tradeoff import Point, chart, sweep
+from fleek_agents.cli import app
 from fleek_agents.config import PrivacyRules, Settings
 from fleek_agents.domain.money import Pence
 from fleek_agents.vault.mandate import SellerMandate
@@ -159,3 +162,23 @@ def test_the_learned_attacker_trains_with_its_own_key_and_puts_ours_back(
     train_learned(attacker_scenarios(3), lambda _s: (ScriptedTommy(), []), NOISY)
     assert seen and set(seen) == {ATTACKER_KEY}
     assert os.environ["FLEEK_VAULT_KEY"] == "our-key"
+
+
+def test_the_sweep_draws_every_setting_and_marks_what_passes() -> None:
+    grid = (("thirds", 0, 0), ("thirds", 8, 0), ("boulware", 0, 0))
+    points = sweep(Settings(), grid, lots=12, deal_lots=20)
+    assert [p.label for p in points][1] == "thirds, margin 8%, noise 0%"
+    svg = chart(points)
+    # each setting is a numbered dot on the plot and the same dot in the key
+    assert svg.count('r="7"') == 6 and "boulware, margin 0%, noise 0%:" in svg
+    before, after = points[0], points[1]
+    good = Point("x", 8, 0, after.strongest, before.deals, before.buyer_share)
+    cut_enough = after.strongest.within.value <= 0.6 * before.strongest.within.value
+    assert good.passes(before) == cut_enough
+
+
+def test_the_leak_command_runs_with_the_layer_on() -> None:
+    result = CliRunner().invoke(app, ["leak", "--privacy"])
+    assert result.exit_code == 0, result.output
+    flat = " ".join(result.output.split())  # the terminal wraps long lines
+    assert "privacy layer on (margin up to 8%, noise 0%)" in flat

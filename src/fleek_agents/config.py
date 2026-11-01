@@ -104,8 +104,8 @@ class PrivacyRules(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     on: bool = False
-    margin_max_pct: Annotated[StrictInt, Field(ge=0, le=20)] = 4
-    noise_pct: Annotated[StrictInt, Field(ge=0, le=20)] = 4
+    margin_max_pct: Annotated[StrictInt, Field(ge=0, le=20)] = 8  # chosen by the sweep (1 Nov)
+    noise_pct: Annotated[StrictInt, Field(ge=0, le=20)] = 0  # measured: noise never helped
 
 
 class Settings(BaseModel):
