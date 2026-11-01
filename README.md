@@ -63,6 +63,7 @@ uv run fleek leak --privacy                                     # ...with the se
 uv run fleek leak --sweep                                       # every setting, and the trade-off chart
 uv run fleek leak --route matching                              # what matching's yes/no gives away
 uv run fleek bench --suite tactics --agents claude-haiku-5-5   # pressure in the listing, vs a control
+uv run fleek bench --suite redteam --agents claude-haiku-5-5 --reader  # an attacker that adapts
 ```
 
 To run Claude live, put an Anthropic key in `.env` (copy `.env.example`) and add `--live` to
