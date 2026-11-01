@@ -14,7 +14,6 @@ import pytest
 from sqlalchemy.orm import Session
 from typer.testing import CliRunner
 
-from fleek_agents.agents.scripted import ScriptedRalph, ScriptedTommy
 from fleek_agents.cli import app
 from fleek_agents.config import Settings, load_settings
 from fleek_agents.domain.money import Pence
@@ -35,6 +34,7 @@ from fleek_agents.room.scenario import (
 )
 from fleek_agents.room.server import BadRequest, Room, make_server, read_input
 from fleek_agents.room.story import story
+from fleek_agents.scripted import ScriptedRalph, ScriptedTommy
 from fleek_agents.store.db import Base, make_engine
 from fleek_agents.store.events import EventLog
 from fleek_agents.store.market import load_market

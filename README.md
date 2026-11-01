@@ -148,6 +148,10 @@ To run Claude live, put an Anthropic key in `.env` (copy `.env.example`) and add
 | [Decision 001](docs/decisions/001-secrets-never-enter-the-model.md) | Why the secret limits never enter the model |
 | [Decision 002](docs/decisions/002-no-vector-database-yet.md) | Why ranking uses NumPy, not a vector database |
 
+**Where the agents are:** Claude Ralph and Claude Tommy, the product, are in
+[`src/fleek_agents/agents/`](src/fleek_agents/agents/). Their no-AI stand-ins, plain rules used by
+the tests, CI and the bench, are kept apart in [`src/fleek_agents/scripted/`](src/fleek_agents/scripted/).
+
 The pull requests show how it was built, one change at a time, including the mistakes and their
 fixes.
 

@@ -55,10 +55,16 @@ addopts = "-q"
 root_package = "fleek_agents"
 
 [[tool.importlinter.contracts]]
-name = "Agents and the AI client never import the vault, directly or indirectly"
+name = "Agents (Claude and scripted) and the AI client never import the vault, directly or indirectly"
 type = "forbidden"
-source_modules = ["fleek_agents.agents", "fleek_agents.llm"]
+source_modules = ["fleek_agents.agents", "fleek_agents.scripted", "fleek_agents.llm"]
 forbidden_modules = ["fleek_agents.vault"]
+
+[[tool.importlinter.contracts]]
+name = "The Claude agent never imports the scripted ones: they're test stand-ins, not part of it"
+type = "forbidden"
+source_modules = ["fleek_agents.agents"]
+forbidden_modules = ["fleek_agents.scripted"]
 
 [[tool.importlinter.contracts]]
 name = "The domain stays pure: no database, no vault"

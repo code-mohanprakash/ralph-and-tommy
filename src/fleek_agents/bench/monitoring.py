@@ -11,7 +11,6 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 
 from fleek_agents.agents.base import Agent
-from fleek_agents.agents.scripted import ScriptedRalph, ScriptedTommy
 from fleek_agents.bench.episode import AgentPair, Episode, TapClient, run_episode
 from fleek_agents.bench.moves import probe_sessions
 from fleek_agents.bench.scenarios import Scenario, generate
@@ -20,6 +19,7 @@ from fleek_agents.config import Settings
 from fleek_agents.domain.state import NegotiationState
 from fleek_agents.harness.reader import ListingFacts, ListingReader
 from fleek_agents.humans.monitors import Flag, Visit, flags_for
+from fleek_agents.scripted import ScriptedRalph, ScriptedTommy
 
 # Clean listings for the text check's false-alarm rate. Some are borderline on purpose: real
 # sellers do mention scarcity, prices and condition, and a check that flags them is a nuisance.

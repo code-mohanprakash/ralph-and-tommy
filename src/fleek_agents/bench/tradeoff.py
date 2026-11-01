@@ -10,7 +10,6 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 from fleek_agents.agents.base import Agent
-from fleek_agents.agents.scripted import BoulwareTommy, ScriptedRalph, ScriptedTommy
 from fleek_agents.bench.episode import TapClient
 from fleek_agents.bench.moves import LeakScore, moves_report
 from fleek_agents.bench.run import run_suite
@@ -18,6 +17,7 @@ from fleek_agents.bench.scenarios import Scenario, generate
 from fleek_agents.bench.score import summarise
 from fleek_agents.bench.stats import Estimate
 from fleek_agents.config import PrivacyRules, Settings
+from fleek_agents.scripted import BoulwareTommy, ScriptedRalph, ScriptedTommy
 
 STYLES: dict[str, Callable[[], ScriptedTommy]] = {
     "thirds": ScriptedTommy,

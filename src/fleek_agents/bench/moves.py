@@ -26,7 +26,6 @@ from statistics import median
 
 from fleek_agents.agents.base import Accept, Agent, Send, View, WalkAway
 from fleek_agents.agents.claude import ClaudeAgent
-from fleek_agents.agents.scripted import BoulwareTommy, ScriptedTommy
 from fleek_agents.bench.episode import START, AgentPair, Episode, TapClient, run_episode
 from fleek_agents.bench.scenarios import PIECES, Scenario, generate, lowest_seller_price
 from fleek_agents.bench.stats import Estimate, wilson
@@ -35,6 +34,7 @@ from fleek_agents.domain.money import Pence
 from fleek_agents.domain.offers import OfferCard
 from fleek_agents.llm.client import LLMClient
 from fleek_agents.safety.attacks import ProbingBuyer
+from fleek_agents.scripted import BoulwareTommy, ScriptedTommy
 from fleek_agents.vault.bands import seller_band
 from fleek_agents.vault.mandate import SellerMandate
 from fleek_agents.vault.privacy import lowest_allowed

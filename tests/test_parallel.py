@@ -5,7 +5,6 @@ from sqlalchemy.orm import Session
 
 from fleek_agents.agents.base import Agent
 from fleek_agents.agents.claude import ClaudeAgent
-from fleek_agents.agents.scripted import ScriptedRalph, ScriptedTommy
 from fleek_agents.config import Settings
 from fleek_agents.domain.state import NegotiationState
 from fleek_agents.llm.env import load_env_file
@@ -15,6 +14,7 @@ from fleek_agents.matching.funnel import bundles_for
 from fleek_agents.orchestrator.clock import FakeClock
 from fleek_agents.orchestrator.opening import open_negotiation
 from fleek_agents.orchestrator.run import Deal, link_buyer_deals, run_parallel
+from fleek_agents.scripted import ScriptedRalph, ScriptedTommy
 from fleek_agents.store.db import Base, make_engine
 from fleek_agents.store.events import EventLog
 from fleek_agents.store.market import load_market

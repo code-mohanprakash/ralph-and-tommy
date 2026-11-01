@@ -10,7 +10,8 @@ flowchart LR
     subgraph public["Public: anyone in the system may read"]
         market["market<br/>buyers, sellers, lots, wants"]
         matching["matching<br/>SQL filters → could any price work? → rank → top 10"]
-        agents["agents<br/>Ralph and Tommy<br/>(Claude or scripted)"]
+        agents["agents<br/>Claude Ralph and Tommy"]
+        scripted["scripted<br/>no-AI stand-ins<br/>for tests and the bench"]
     end
 
     subgraph harness["Harness: Fleek's code, the referee"]
@@ -102,7 +103,8 @@ the log rebuilds each negotiation exactly; the saved state is checked against a 
 | `orchestrator` | Opening (cooldown, 3 tries per lot), rounds and the clock, the turn-by-turn runner, approval by buyer, seller or account manager, stop and hand over (`controls.py`), offers to buyers who walked away (`offers.py`) |
 | `harness` | The tool loop, strict schemas, the agents' tools, escalation to a person, the quarantined listing reader and blind mode (`reader.py`) |
 | `llm` | The Claude client, model routing, spend caps, record and replay |
-| `agents` | The `Agent` interface, scripted Ralph and Tommy, Claude Ralph and Tommy, picking 3 lots |
+| `agents` | The AI side: the `Agent` interface, Claude Ralph and Tommy, their prompts, picking 3 lots |
+| `scripted` | **No AI.** Ralph and Tommy as plain rules, for tests, CI and the bench: free, the same every run, no key needed. Two Tommy styles (thirds, Boulware). Import contracts keep them apart: they never import the vault, and the Claude agent never imports them |
 | `humans` | What account managers read: the near-miss call list, the watch list from the monitors, and the summary written whenever a person is needed |
 | `safety` | The naive baseline, attacks, the leak detector and scanner, the safety report |
 | `evals` | The market simulation |

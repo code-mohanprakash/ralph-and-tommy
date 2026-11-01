@@ -15,7 +15,6 @@ from sqlalchemy.orm import Session
 
 from fleek_agents.agents.base import Agent
 from fleek_agents.agents.claude import ClaudeAgent
-from fleek_agents.agents.scripted import ScriptedTommy
 from fleek_agents.config import Settings
 from fleek_agents.domain.events import EscalationReason
 from fleek_agents.domain.models import Lot, Seller, Want
@@ -34,6 +33,7 @@ from fleek_agents.safety.attacks import (
     attack_naive,
 )
 from fleek_agents.safety.naive import NaiveSeller
+from fleek_agents.scripted import ScriptedTommy
 from fleek_agents.store.db import Base, make_engine
 from fleek_agents.store.deals import put_on_sale
 from fleek_agents.store.events import EventLog

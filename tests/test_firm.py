@@ -101,11 +101,11 @@ def _run(scenario: Scenario, lot: Lot, limit: SellerMandate) -> list[tuple[objec
 
     from sqlalchemy.orm import Session
 
-    from fleek_agents.agents.scripted import ScriptedRalph, ScriptedTommy
     from fleek_agents.config import Settings
     from fleek_agents.orchestrator.clock import FakeClock
     from fleek_agents.orchestrator.opening import open_negotiation
     from fleek_agents.orchestrator.run import run_negotiation
+    from fleek_agents.scripted import ScriptedRalph, ScriptedTommy
     from fleek_agents.store.db import Base, make_engine
     from fleek_agents.store.deals import put_on_sale
     from fleek_agents.store.events import EventLog

@@ -4,12 +4,12 @@ from typing import Any
 import pytest
 from pydantic import BaseModel
 
-from fleek_agents.agents.scripted import ScriptedRalph
 from fleek_agents.config import Settings
 from fleek_agents.domain.money import Pence
 from fleek_agents.orchestrator.clock import FakeClock
 from fleek_agents.orchestrator.run import run_parallel
 from fleek_agents.safety.leaks import find_amounts, is_near
+from fleek_agents.scripted import ScriptedRalph
 from fleek_agents.trace.export import RunTrace, export_run
 from fleek_agents.vault.secret import SecretMoney
 from tests.test_parallel import LOTS, SECRETS, WANT, three_deals

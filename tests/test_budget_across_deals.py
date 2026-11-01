@@ -2,7 +2,6 @@ from datetime import UTC, date, datetime
 
 from sqlalchemy.orm import Session
 
-from fleek_agents.agents.scripted import ScriptedRalph, ScriptedTommy
 from fleek_agents.config import Settings
 from fleek_agents.domain.events import EscalationReason
 from fleek_agents.domain.money import Pence
@@ -12,6 +11,7 @@ from fleek_agents.orchestrator.clock import FakeClock
 from fleek_agents.orchestrator.opening import open_negotiation
 from fleek_agents.orchestrator.rounds import send_card
 from fleek_agents.orchestrator.run import run_negotiation
+from fleek_agents.scripted import ScriptedRalph, ScriptedTommy
 from fleek_agents.store.db import Base, make_engine
 from fleek_agents.store.deals import accept, put_on_sale
 from fleek_agents.store.events import EventLog
