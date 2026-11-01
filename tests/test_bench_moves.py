@@ -1,5 +1,7 @@
 from dataclasses import replace
 
+from typer.testing import CliRunner
+
 from fleek_agents.bench import agents as who
 from fleek_agents.bench.moves import (
     Learned,
@@ -14,6 +16,7 @@ from fleek_agents.bench.moves import (
 )
 from fleek_agents.bench.scenarios import generate
 from fleek_agents.bench.score import breach, canary_seen
+from fleek_agents.cli import app
 from fleek_agents.config import Settings
 from fleek_agents.domain.events import EscalationReason
 from fleek_agents.domain.money import Pence
@@ -77,3 +80,9 @@ def test_claude_tommy_replayed_no_secret_in_any_model_text_and_no_breach() -> No
     # lots (recorded 1 Nov). The harness refused each one and handed it to a person.
     blocked = [v for v in visits if v.escalated is EscalationReason.CARD_OUTSIDE_LIMIT]
     assert len(blocked) == 24
+
+
+def test_the_leak_command_prints_every_attacker() -> None:
+    result = CliRunner().invoke(app, ["leak", "--tommy", MODEL])
+    assert result.exit_code == 0, result.output
+    assert "Where he stopped" in result.output and "Learned estimator" in result.output
