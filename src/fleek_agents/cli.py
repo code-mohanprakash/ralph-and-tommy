@@ -481,6 +481,79 @@ def room(
         server.server_close()
 
 
+@app.command(name="live")
+def live_demo(
+    port: Annotated[int, typer.Option(help="Which port on this computer.")] = 8770,
+    open_browser: Annotated[
+        bool, typer.Option("--open/--no-open", help="Open the page in your browser.")
+    ] = True,
+    model: Annotated[
+        Agents, typer.Option("--claude", help="Which Claude to offer next to the scripted agents.")
+    ] = Agents.haiku,
+    live: Annotated[
+        bool, typer.Option("--live", help="Ask Claude now, any numbers (needs the key).")
+    ] = False,
+    record: Annotated[
+        bool,
+        typer.Option("--record", help="Record Claude on the ready-made onboarding, then stop."),
+    ] = False,
+) -> None:
+    """The live demo: the seller and the buyer type in their side, then watch both screens."""
+    import webbrowser
+
+    from fleek_agents.live import agents as who
+    from fleek_agents.live.forms import PRESET, Setup
+    from fleek_agents.live.server import Desk, make_server
+    from fleek_agents.live.session import LiveSession
+    from fleek_agents.llm.env import load_env_file
+
+    console = Console()
+    base = _settings()
+    # The demo runs with every protection on: the secret margin and the match gate.
+    settings = base.model_copy(
+        update={
+            "privacy": base.privacy.model_copy(update={"on": True}),
+            "match_gate": base.match_gate.model_copy(update={"on": True}),
+        }
+    )
+    if model is Agents.scripted:
+        console.print("--claude takes a Claude model, e.g. claude-haiku-5-5.")
+        raise typer.Exit(code=2)
+    name = {"claude-haiku-5-5": "Claude Haiku 5.5", "claude-sonnet-5-5": "Claude Sonnet 5.5"}[
+        model.value
+    ]
+    if record:
+        load_env_file()
+        setup = Setup.model_validate(PRESET | {"agents": "claude"})
+        pair = who.recording(model.value, settings)
+        session = LiveSession(setup, settings, pair, name)
+        while session.step():
+            pass
+        console.print(f"Recorded {name} on the ready-made onboarding: {session.state}.")
+        return
+    if live:
+        load_env_file()
+        claude = (who.live(model.value, settings), f"{name}, live")
+    else:
+        claude = (who.replayed(model.value), f"{name}, replayed (ready-made onboarding only)")
+    desk = Desk(settings, {"scripted": (who.scripted, "Scripted agents, no AI"), "claude": claude})
+    try:
+        server = make_server(desk, port)
+    except OSError:
+        console.print(f"Port {port} is busy. Try another: fleek live --port {port + 1}")
+        raise typer.Exit(code=2) from None
+    url = f"http://127.0.0.1:{server.server_address[1]}/"
+    console.print(f"The live demo is open at {url}  (Ctrl+C to stop)")
+    if open_browser:
+        webbrowser.open(url)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        console.print("Stopped.")
+    finally:
+        server.server_close()
+
+
 class Suite(StrEnum):
     core = "core"
     tactics = "tactics"
