@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ralph &amp; Tommy · Live</title>
+  <link rel="stylesheet" href="/static/live.css">
+</head>
+<body>
+<header class="bar">
+  <div>
+    <h1>Ralph &amp; Tommy <span class="tag">live</span></h1>
+    <p class="muted small" id="agents-label">Type in both sides, then watch them negotiate.</p>
+  </div>
+  <div class="bar-right">
+    <span class="clock" id="clock" hidden></span>
+    <button id="restart" hidden>New session</button>
+  </div>
+</header>
+
+<main>
+  <!-- Onboarding -->
+  <section id="onboarding">
+    <ol class="steps" aria-label="Onboarding steps">
+      <li data-step="1" class="on">1 · Seller's stock</li>
+      <li data-step="2">2 · What the buyer wants</li>
+      <li data-step="3">3 · Who negotiates</li>
+    </ol>
+    <p class="intro">Each side types in its own part. The two secret numbers (the seller's floor
+      and the buyer's top price) go to Fleek's vault only: no AI ever sees them.
+      <button class="link" id="use-preset" type="button">Fill in a ready-made example</button></p>
+
+    <form id="form" novalidate>
+      <fieldset class="step" data-step="1">
+        <legend>You're the seller</legend>
+        <div class="grid two">
+          <label>Warehouse name<input name="seller_name" required maxlength="80"></label>
+          <label>Country<input name="seller_country" value="PK" maxlength="2" pattern="[A-Z]{2}"></label>
+        </div>
+        <div class="choice" role="radiogroup" aria-label="Seller's final say">
+          <span>Who says the final yes?</span>
+          <label><input type="radio" name="seller_final_say" value="agent" checked> Tommy, inside my floor</label>
+          <label><input type="radio" name="seller_final_say" value="person"> Ask me before every deal</label>
+        </div>
+        <h2>Your stock</h2>
+        <div id="stock"></div>
+        <button type="button" id="add-lot">+ Add another lot</button>
+      </fieldset>
+
+      <fieldset class="step" data-step="2" hidden>
+        <legend>You're the buyer</legend>
+        <div class="grid three">
+          <label>Shop name<input name="buyer_name" required maxlength="80"></label>
+          <label>Kind of buyer
+            <select name="buyer_kind">
+              <option value="vintage_shop">Vintage shop</option>
+              <option value="online_reseller">Online reseller</option>
+              <option value="enterprise">Enterprise</option>
+            </select></label>
+          <label>Country<input name="buyer_country" value="GB" maxlength="2"></label>
+        </div>
+        <div class="grid three">
+          <label>Category<input name="buyer_category" required placeholder="jeans"></label>
+          <label>Brands <span class="muted small">(comma between)</span><input name="buyer_brands" placeholder="Levi's"></label>
+          <label>Pieces you want<input name="buyer_pieces" type="number" min="1" required></label>
+        </div>
+        <div class="choice" id="grades" aria-label="Grades you accept">
+          <span>Grades you accept</span>
+        </div>
+        <label>Note to Ralph <span class="muted small">Ralph reads this. No prices here.</span>
+          <textarea name="buyer_notes" maxlength="300" rows="2"></textarea></label>
+        <div class="secret">
+          <label>Your top price, per piece delivered (£)
+            <input name="buyer_top" type="number" step="0.01" min="0.01" required></label>
+          <p class="muted small">Shipping and Fleek's 2% protection fee included. Only you and the
+            vault see it. Ralph is told "inside" or "past" your limit, never the number.</p>
+        </div>
+        <div class="choice" role="radiogroup" aria-label="Buyer's final say">
+          <span>Who says the final yes?</span>
+          <label><input type="radio" name="buyer_final_say" value="person" checked> Ask me before every deal</label>
+          <label><input type="radio" name="buyer_final_say" value="agent"> Ralph, inside my limit</label>
+        </div>
+      </fieldset>
+
+      <fieldset class="step" data-step="3" hidden>
+        <legend>Who negotiates</legend>
+        <div class="choice column" id="agent-choice"></div>
+        <p class="muted small">Every protection is on: the vault checks every card, a secret margin
+          hides the seller's floor, matching is rationed, and Ralph never reads seller-written text.</p>
+      </fieldset>
+
+      <p class="error" id="form-error" role="alert" hidden></p>
+      <div class="nav">
+        <button type="button" id="back" hidden>Back</button>
+        <button type="button" class="primary" id="next">Next</button>
+        <button type="submit" class="primary" id="start" hidden>Start negotiating</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- The two screens -->
+  <section id="screens" hidden>
+    <div class="run">
+      <button class="primary" id="play">▶ Run</button>
+      <button id="step">One turn</button>
+      <span class="status" id="status" aria-live="polite"></span>
+    </div>
+    <div class="split">
+      <article class="screen" id="buyer-screen" aria-label="The buyer's screen">
+        <header class="screen-head ralph">
+          <div><span class="who">Buyer</span><h2 data-field="name"></h2></div>
+          <span class="avatar">Ralph</span>
+        </header>
+        <p class="secret-chip" data-field="secret"></p>
+        <div class="lot" data-field="lot"></div>
+        <ol class="timeline" data-field="lines"></ol>
+        <div class="ask" data-field="ask" hidden></div>
+        <div class="controls" data-side="buyer"></div>
+      </article>
+      <article class="screen" id="seller-screen" aria-label="The seller's screen">
+        <header class="screen-head tommy">
+          <div><span class="who">Seller</span><h2 data-field="name"></h2></div>
+          <span class="avatar">Tommy</span>
+        </header>
+        <p class="secret-chip" data-field="secret"></p>
+        <div class="lot" data-field="lot"></div>
+        <ol class="timeline" data-field="lines"></ol>
+        <div class="ask" data-field="ask" hidden></div>
+        <div class="controls" data-side="seller"></div>
+      </article>
+    </div>
+    <article class="fleek" id="fleek-screen" aria-label="Fleek's view">
+      <header><h2>Fleek</h2><span class="muted small">matching, the referee, account managers</span></header>
+      <div class="fleek-body">
+        <div><h3>Matching</h3><ul data-field="matching"></ul></div>
+        <div><h3>Referee and account manager</h3><ol class="timeline compact" data-field="lines"></ol>
+          <div class="ask" data-field="ask" hidden></div></div>
+        <div><h3>Watch list</h3><ul data-field="watch"></ul></div>
+      </div>
+    </article>
+  </section>
+</main>
+
+<template id="lot-template">
+  <fieldset class="lot-form">
+    <legend>Lot <span data-n></span> <button type="button" class="link remove">remove</button></legend>
+    <div class="grid three">
+      <label class="wide">Title<input name="title" required maxlength="80"></label>
+      <label>Brand<input name="brand" required></label>
+      <label>Category<input name="category" required></label>
+    </div>
+    <div class="grid four">
+      <label>Grade<select name="grade"><option>A</option><option>B</option><option>C</option><option>AB</option><option>BC</option><option>ABC</option></select></label>
+      <label>Pieces per bundle<input name="pieces" type="number" min="1" required></label>
+      <label>Bundles<input name="bundles" type="number" min="1" required></label>
+      <label>List price, £/piece<input name="list_price" type="number" step="0.01" min="0.01" required></label>
+    </div>
+    <div class="grid four">
+      <label>Shipping, £/piece<input name="shipping" type="number" step="0.01" min="0" required></label>
+      <label class="wide">Description <span class="muted small">Tommy reads it. Ralph doesn't.</span>
+        <textarea name="description" rows="2" maxlength="600"></textarea></label>
+    </div>
+    <div class="secret">
+      <label>Your floor, £/piece after Fleek's 15%
+        <input name="floor" type="number" step="0.01" min="0.01" required></label>
+      <p class="muted small">Only you and the vault see it. Tommy is told "inside" or "past" it, never the number.</p>
+    </div>
+    <div class="choice">
+      <span>How Tommy sells it</span>
+      <label><input type="radio" value="haggle" checked> Haggle</label>
+      <label><input type="radio" value="firm"> Firm price</label>
+      <label class="firm" hidden>Firm price, £/piece<input name="firm_price" type="number" step="0.01" min="0.01"></label>
+    </div>
+    <p class="muted small mode-help">Haggle: Tommy gives ground toward your floor. Firm: one public price, nothing about your floor can leak, but fewer deals close.</p>
+    <details>
+      <summary>Add-ons</summary>
+      <div class="grid two">
+        <label>Sell by <span class="muted small">(public)</span><input name="sell_by" type="date"></label>
+        <label>Offer to buyers who walk away, % off <span class="muted small">(public)</span><input name="walkaway_offer_pct" type="number" min="1" max="50"></label>
+      </div>
+    </details>
+  </fieldset>
+</template>
+
+<script src="/static/live.js"></script>
+</body>
+</html>
