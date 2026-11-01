@@ -19,6 +19,7 @@ class EscalationReason(StrEnum):
     ACCEPT_OUTSIDE_LIMIT = "accept_outside_limit"  # an agent tried to accept past a secret limit
     CARD_OUTSIDE_LIMIT = "card_outside_limit"  # an agent tried to send a card past its own limit
     OVER_BUDGET = "over_budget"  # the move would take the buyer past their budget across deals
+    ASKED_FOR_A_PERSON = "asked_for_a_person"  # the buyer or seller handed it to an account manager
 
 
 # The moves that carry an offer card, and whose card it must be.

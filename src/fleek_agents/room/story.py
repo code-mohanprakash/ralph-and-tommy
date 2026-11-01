@@ -38,6 +38,7 @@ WHY_STOPPED = {
     EscalationReason.MODEL_REFUSED: "{who}'s AI refused to answer. A person takes over.",
     EscalationReason.TOO_MANY_CORRECTIONS: "{who}'s AI kept giving answers the rules don't allow. "
     "A person takes over.",
+    EscalationReason.ASKED_FOR_A_PERSON: "A person asked an account manager to take over.",
     EscalationReason.SPEND_CAP: "The AI spending limit for this negotiation is reached. "
     "A person takes over.",
 }

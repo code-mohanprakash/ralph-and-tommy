@@ -18,6 +18,7 @@ FAILED_ENDINGS = {
     NegotiationState.WALKED_AWAY,
     NegotiationState.EXPIRED,
     NegotiationState.REJECTED_BY_HUMAN,
+    NegotiationState.STOPPED,  # or a prober could stop each try to keep it from counting
 }
 
 
