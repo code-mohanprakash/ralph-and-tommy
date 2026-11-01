@@ -95,17 +95,18 @@ the log rebuilds each negotiation exactly; the saved state is checked against a 
 | Package | What's in it |
 |---|---|
 | `domain` | Money in whole pence, Fleek's fees, lots, offer cards, the state machine, events, replay |
-| `vault` | `SecretMoney`, mandates, bands, yes/no checks, budget across deals, the seeded secrets |
+| `vault` | `SecretMoney`, mandates, bands, yes/no checks, budget across deals, the seeded secrets; the secret margin (`privacy.py`) and the match gate (`gate.py`) |
 | `market` | The seeded fake market: 500 buyers, 50 sellers, 1,494 lots |
 | `matching` | The funnel: SQL filters, "could any price work?", local embeddings and ranking |
 | `store` | SQLite: append-only events, snapshots, stock and the atomic accept, pairings |
 | `orchestrator` | Opening, rounds and the clock, the turn-by-turn runner, approval |
-| `harness` | The tool loop, strict schemas, the agents' tools, escalation to a person |
+| `harness` | The tool loop, strict schemas, the agents' tools, escalation to a person, the quarantined listing reader (`reader.py`) |
 | `llm` | The Claude client, model routing, spend caps, record and replay |
 | `agents` | The `Agent` interface, scripted Ralph and Tommy, Claude Ralph and Tommy, picking 3 lots |
-| `humans` | What account managers read: the near-miss call list, and the summary written whenever a person is needed |
+| `humans` | What account managers read: the near-miss call list, the watch list from the monitors, and the summary written whenever a person is needed |
 | `safety` | The naive baseline, attacks, the leak detector and scanner, the safety report |
 | `evals` | The market simulation |
+| `bench` | The deep dive's test bench: generated deals with canary secrets, attackers (moves, matching, words, an adaptive red team), the privacy trade-off sweep, monitor scoring, error bars ([SAFETY_CASE.md](SAFETY_CASE.md)) |
 | `trace` | Exporting a run as JSON |
 | `room` | The Deal Room: a small fixed market, one negotiation through the real code, told as steps; a local web server and the 3D page |
 | `config.py` + `market.toml` | Every number we expect to tune |

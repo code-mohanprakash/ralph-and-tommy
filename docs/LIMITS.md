@@ -33,6 +33,14 @@ recordings).
 | Editing `market.toml` changes what the commands do | [`tests/test_cli.py`](../tests/test_cli.py), [`tests/test_config.py`](../tests/test_config.py) |
 | Fees match an independent calculation to the penny | [`tests/test_properties.py`](../tests/test_properties.py) |
 | The results in EVALS.md come from the recordings in the repo | [`tests/test_sim.py`](../tests/test_sim.py) replays both Claude runs and checks the same results |
+| No secret limit appears in any recorded Claude request or response (nearly 3,000 calls) | Canary searches over every tapped call: [`tests/test_bench_moves.py`](../tests/test_bench_moves.py), [`tests/test_bench_tactics.py`](../tests/test_bench_tactics.py), [`tests/test_redteam.py`](../tests/test_redteam.py), each with a planted-canary check in [`tests/test_bench.py`](../tests/test_bench.py) |
+| No recorded Claude negotiation on the bench ends outside a limit (0 of 390, 95% upper bound 0.77%) | The same three test files |
+| Attackers that know the code get within 2% of Tommy's floor on 62% of lots; an 8% secret margin cuts that to 37% for 4 points of deals | [`tests/test_bench_moves.py`](../tests/test_bench_moves.py), [`tests/test_privacy.py`](../tests/test_privacy.py); `fleek leak --sweep` redraws the chart |
+| With the privacy layer on, no counter goes below the floor Tommy works to, and no deal breaks a real limit | [`tests/test_privacy.py`](../tests/test_privacy.py) (100 lots, both Tommy styles) |
+| The match gate never gives a false yes, and its budget is per lot, not per account | [`tests/test_gate.py`](../tests/test_gate.py), [`tests/test_funnel.py`](../tests/test_funnel.py) |
+| Behind the listing reader, none of the seller's words reach Ralph | Text by text over every recorded run: [`tests/test_bench_tactics.py`](../tests/test_bench_tactics.py), [`tests/test_redteam.py`](../tests/test_redteam.py); a spy on both sides in [`tests/test_reader.py`](../tests/test_reader.py) |
+| Probing and returning buyers reach the account managers' watch list from the event log | [`tests/test_monitors.py`](../tests/test_monitors.py), scored in [`tests/test_bench_monitoring.py`](../tests/test_bench_monitoring.py) |
+| Every number in SAFETY_CASE.md comes from the recordings in the repo | The replay tests above check the recorded numbers exactly |
 
 ## What this doesn't show
 
@@ -61,21 +69,26 @@ recordings).
 - **The Deal Room's market is three warehouses, fixed for the demo.** Its scenario labels say
   how the scripted agents end each one; Claude's endings are its own (on the near-miss numbers,
   Claude Tommy tried a counter below his floor instead).
-- **The attacks are the ones I thought of.** One recorded run each, on one model. A red team would
-  find others. `fleek safety` says so on its last line.
-- **Untrusted text still reaches the model.** Listing titles go to Claude Ralph, and the
-  planted-listing attack shows text telling him to offer £25. He didn't, and the harness would
-  have refused a card past his limit anyway. Text can't move a limit; it could still steer a
-  choice inside one.
+- **The attacks are the strongest published ones I could build, not every possible one.**
+  `fleek safety`'s four text attacks are one recorded run each. The deep dive's bench adds
+  attackers that know the code, many lots, and an attacker that adapts, but a human red team
+  would still find others ([SAFETY_CASE.md](SAFETY_CASE.md), section 6).
+- **The reader and the privacy layer are built and measured, but the older commands don't use
+  them yet.** The Deal Room, `fleek simulate`, `fleek negotiate` and `fleek safety` still send the
+  listing text to Claude Ralph and run without the margin or the gate, because their recordings
+  were made before these existed and a replay only answers the exact requests it saw. On the
+  bench, with the reader on, no seller words reach Ralph; an adaptive attacker still moved him
+  by +0.7% of list at best.
 - **The leak scanner catches numbers, not words.** "1600p", "£16" and "16.00" are caught;
   "sixteen pounds" is not.
-- **Matching itself answers a yes/no question about two secrets.** A lot only shows up if some
-  price works for both sides. If a buyer could change their maximum freely, they could watch lots
-  appear and disappear and narrow down a seller's floor. Today a buyer can't change their maximum
-  at all. At scale: limit how often it can change, and count it like a price check.
-- **The other side can still read the cards.** How someone concedes says something about their
-  limit, as in any negotiation. The system stops secrets leaking; it can't stop inference from
-  public moves.
+- **Matching's yes/no can map a floor, and the gate only blurs it.** With many accounts, open
+  matching gave a floor away to the penny in about 12 questions. Through the match gate, 12
+  accounts still land within 2% on 48% of lots: the pass mark I set (more than 100 accounts) was
+  missed. A 10% grid halves that, for more lost matches.
+- **Every negotiation reveals something about a limit.** Measured: an attacker who knows the code
+  gets within 2% of Tommy's floor on 62% of lots. A secret margin of M% caps that at about 4/M
+  and costs deals: 4 points on the bench, about 10% of real matches on the seeded market. The
+  right margin is a business choice, best made on Fleek's own past deals.
 
 **About running it for real**
 
