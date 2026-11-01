@@ -276,13 +276,22 @@ def digest(
     db: Annotated[str, typer.Option(help="The deals file.")] = "fleek.db",
     seed: Annotated[int, typer.Option(help="Which seeded market.")] = 2026,
 ) -> None:
-    """The account managers' call list: failed negotiations that came close, biggest first."""
+    """The account managers' call list (near misses, biggest first) and watch list (flagged)."""
     from fleek_agents.humans.digest import call_list
+    from fleek_agents.humans.monitors import watch_list
 
     rules = _settings().digest  # before opening the deals file, so a wrong folder makes no file
     session, lots = _session(db, seed)
-    items = call_list(EventLog(session), lots, rules)
+    log = EventLog(session)
+    items = call_list(log, lots, rules)
     console = Console()
+    watched = watch_list(log, lots)
+    if watched:
+        table = Table("Negotiation", "Buyer", "Lot", "Why it's on the watch list")
+        for w in watched:
+            table.add_row(w.negotiation_id, w.buyer_id, w.lot_title, w.why)
+        console.print("Watch list: negotiations a monitor flagged.")
+        console.print(table)
     if not items:
         console.print("No near misses to call about.")
         return

@@ -20,13 +20,17 @@ attacks, because a careful attacker never runs a lot's budget dry.
 Nothing here reads the vault: monitors see what an account manager could see.
 """
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from itertools import pairwise
 
+from fleek_agents.domain.models import Lot
 from fleek_agents.domain.money import Pence
 from fleek_agents.domain.offers import OfferCard
+from fleek_agents.domain.state import Actor, Move
+from fleek_agents.store.events import EventLog
+from fleek_agents.store.pairings import PairingRow
 
 SMALL_STEP_PCT = 8
 PROBING_OFFERS = 3
@@ -79,3 +83,45 @@ def flags_for(visit: Visit, earlier: Sequence[Visit] = ()) -> list[Flag]:
     if returning([*same, visit]):
         found.append(Flag.RETURNING)
     return found
+
+
+@dataclass(frozen=True)
+class Watch:
+    """One flagged negotiation on the account managers' watch list."""
+
+    negotiation_id: str
+    buyer_id: str
+    lot_title: str
+    flags: tuple[Flag, ...]
+
+    @property
+    def why(self) -> str:
+        return " ".join(WHY[f] for f in self.flags)
+
+
+def watch_list(log: EventLog, lots: Mapping[str, Lot]) -> list[Watch]:
+    """Every negotiation in the record a monitor flags, oldest first, with plain reasons."""
+    seen: list[Visit] = []
+    out = []
+    for row in log.session.query(PairingRow).order_by(PairingRow.id):
+        if row.negotiation_id is None:
+            continue
+        events = log.read(row.negotiation_id)
+        visit = Visit(
+            buyer_id=row.buyer_id,
+            lot_id=row.lot_id,
+            list_price=lots[row.lot_id].base_price,
+            cards=[e.card for e in events if e.card is not None],
+            accepted_by_buyer=any(
+                e.move is Move.ACCEPT and e.by is Actor.BUYER_AGENT for e in events
+            ),
+            walked_away_by_buyer=any(
+                e.move is Move.WALK_AWAY and e.by is Actor.BUYER_AGENT for e in events
+            ),
+        )
+        flags = flags_for(visit, seen)
+        seen.append(visit)
+        if flags:
+            title = lots[row.lot_id].title
+            out.append(Watch(row.negotiation_id, row.buyer_id, title, tuple(flags)))
+    return out
