@@ -102,6 +102,7 @@ class Line:
     price: int | None = None
     kind: str = "note"  # card, check, note, stop, ask, end
     seller: str | None = None  # the seller whose negotiation this line belongs to
+    band: str | None = None  # on a private check: the word the vault answered with
 
 
 def _clock(at: datetime) -> str:
@@ -471,6 +472,7 @@ class LiveSession:
                     at=when,
                     price=asked.price.value,
                     kind="check",
+                    band=asked.band.value,
                 )
             if w.action is not None:
                 self._tell(who, w.action, new, when)

@@ -263,3 +263,10 @@ def test_ralph_s_ranking_reasons_never_reach_a_seller_s_screen() -> None:
     view = live.view()
     assert "BUYER-PRIORITY-SUMMARY" in json.dumps(view["buyer"])
     assert "BUYER-PRIORITY" not in json.dumps(view["seller"])
+
+
+def test_each_private_check_carries_its_band_word_for_the_screen() -> None:
+    live = run(LiveSession(setup(), SETTINGS, scripted, "test"))
+    checks = [line for line in live.lines if line.kind == "check"]
+    assert checks and all(c.band in {"strong", "acceptable", "stretch", "outside"} for c in checks)
+    assert all(c.side in ("buyer", "seller") for c in checks)  # each only on its own side's screen

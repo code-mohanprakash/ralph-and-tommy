@@ -204,6 +204,15 @@ function lotBox(view, side) {
   return parts;
 }
 
+const NAMES = { ralph: "Ralph", tommy: "Tommy", vault: "Vault", fleek: "Fleek",
+  account_manager: "Account manager", buyer: "Buyer", seller: "Seller" };
+
+// Every £ amount in a line, in bold: the numbers are what people watch.
+function withAmounts(text) {
+  const parts = text.split(/(£\d[\d,]*(?:\.\d{2})?)/);
+  return parts.map((p, i) => (i % 2 ? el("strong", { class: "amount", text: p }) : document.createTextNode(p)));
+}
+
 function lineItem(line, mine) {
   const at = el("span", { class: "at", text: `${line.at}` });
   const cls = {
@@ -211,19 +220,36 @@ function lineItem(line, mine) {
     check: "check",
     stop: "stop", ask: "ask", end: "end", note: "note",
   }[line.kind] || "note";
-  return el("li", { class: cls }, at, document.createTextNode(line.text));
+  if (line.kind === "check") {
+    return el("li", { class: cls },
+      el("span", { class: "lock", text: "Private check" }),
+      el("span", { class: `band ${line.band || ""}`, text: line.band || "" }),
+      el("span", { class: "check-text" }, ...withAmounts(line.text)));
+  }
+  const head = line.kind === "card" ? el("span", { class: "speaker", text: NAMES[line.who] || line.who }) : null;
+  return el("li", { class: cls }, head, at, el("span", { class: "text" }, ...withAmounts(line.text)));
+}
+
+// Re-render without replaying old entrances: only lines added since last time animate in.
+function fillLines(list, items) {
+  const before = Number(list.dataset.count || 0);
+  items.forEach((li, i) => { if (i >= before && before > 0) li.classList.add("new"); });
+  list.replaceChildren(...items);
+  list.dataset.count = String(items.length);
+  list.scrollTop = list.scrollHeight;
 }
 
 function renderScreen(root, data, view, side) {
   const agent = side === "buyer" ? "ralph" : "tommy";
   $('[data-field="name"]', root).textContent = data.name;
   const what = side === "buyer" ? "Your top price" : "Your floor for this lot";
-  $('[data-field="secret"]', root).textContent = data.secret
-    ? `🔒 ${what}: ${data.secret}. Only you and the vault see this.` : "";
+  $('[data-field="secret"]', root).replaceChildren(...(data.secret ? [
+    el("span", { class: "secret-label", text: what }),
+    el("strong", { text: data.secret }),
+    el("span", { class: "secret-note", text: "Only you and the vault see this. Never the AI." }),
+  ] : []));
   $('[data-field="lot"]', root).replaceChildren(...lotBox(view, side));
-  const list = $('[data-field="lines"]', root);
-  list.replaceChildren(...data.lines.map((l) => lineItem(l, agent)));
-  list.scrollTop = list.scrollHeight;
+  fillLines($('[data-field="lines"]', root), data.lines.map((l) => lineItem(l, agent)));
   const ask = $('[data-field="ask"]', root);
   ask.hidden = !data.asked;
   if (data.asked) {
@@ -232,6 +258,9 @@ function renderScreen(root, data, view, side) {
       el("button", { class: "ok", text: "Approve", onclick: () => decide(side, "approve") }),
       el("button", { class: "bad", text: "Reject", onclick: () => decide(side, "reject") }));
   }
+  // The approval box can appear below the conversation and shrink it: keep the newest line in view.
+  const lines = $('[data-field="lines"]', root);
+  lines.scrollTop = lines.scrollHeight;
   const controls = $(`.controls[data-side="${side}"]`);
   const live = !view.over && !view.waiting;
   controls.replaceChildren(
@@ -248,11 +277,12 @@ function renderFunnel(root, view) {
   const fu = view.fleek.funnel;
   if (!fu || !fu.rows) return;
   const ranked = fu.rows.filter((r) => r.step === "ranked").length;
+  const stepTile = (n, label) => el("li", {}, el("b", { text: String(n) }), el("span", { text: label }));
   $('[data-field="funnel-steps"]', root).replaceChildren(
-    el("li", { text: `${fu.lots} lots from ${fu.sellers} sellers` }),
-    el("li", { text: `${fu.passed} pass the filters` }),
-    el("li", { text: `${fu.possible} the vault says a price can work` }),
-    el("li", { text: `${ranked} ranked` }));
+    stepTile(fu.lots, `lots from ${fu.sellers} sellers`),
+    stepTile(fu.passed, "pass the filters"),
+    stepTile(fu.possible, "the vault says a price can work"),
+    stepTile(ranked, fu.rerank && fu.rerank.by === "claude" ? "ranked, then re-ranked by Ralph" : "ranked"));
   const current = view.lot ? view.lot.id : null;
   const filtered = fu.rows.filter((r) => r.step === "filters").length;
   const toggle = el("tr", { class: "toggle" }, el("td", { colspan: "4" },
@@ -298,13 +328,13 @@ function renderMetrics(root, m) {
   const t = m.totals;
   const pairs = [
     ["Agent turns", t.agent_turns], ["Model calls", t.model_calls],
-    ["Tokens in / out", `${t.tokens_in} / ${t.tokens_out}`], ["AI cost", `${t.cost_cents}¢`],
+    ["Tokens", `${t.tokens_in.toLocaleString("en-GB")} in · ${t.tokens_out.toLocaleString("en-GB")} out`], ["AI cost", `${t.cost_cents}¢`],
     ["Agent time", `${t.wall_seconds}s`], ["Lots tried", t.lots_tried], ["Cards", t.cards],
     ["Simulated time", `${t.simulated_hours}h`], ["Deal price", t.price_vs_list || "–"],
     ["Vault stops", t.vault_stops],
   ];
-  $('[data-field="metrics"]', root).replaceChildren(...pairs.flatMap(([k, v]) =>
-    [el("dt", { text: k }), el("dd", { text: String(v) })]));
+  $('[data-field="metrics"]', root).replaceChildren(...pairs.map(([k, v]) =>
+    el("div", { class: String(v).length > 12 ? "tile wide" : "tile" }, el("b", { text: String(v) }), el("span", { text: k }))));
 }
 
 function render(view) {
@@ -317,7 +347,7 @@ function render(view) {
   const f = $("#fleek-screen");
   renderFunnel(f, view);
   renderMetrics(f, view.fleek.metrics);
-  $('[data-field="lines"]', f).replaceChildren(...view.fleek.lines.map((l) => lineItem(l, "")));
+  fillLines($('[data-field="lines"]', f), view.fleek.lines.map((l) => lineItem(l, "")));
   $('[data-field="watch"]', f).replaceChildren(...(view.fleek.watch.length
     ? view.fleek.watch.map((w) => el("li", { text: `${w.buyer}: ${w.why}` }))
     : [el("li", { class: "muted", text: "Nobody flagged." })]));
@@ -343,6 +373,7 @@ function status(view, thinking = false) {
   else if (thinking) text = `${TURN[view.state] === "ralph" ? "Ralph" : "Tommy"} is thinking`;
   else text = `${TURN[view.state] === "ralph" ? "Ralph" : "Tommy"}'s turn.`;
   box.textContent = text;
+  box.dataset.tone = view.over ? "over" : view.waiting ? "waiting" : view.paused ? "paused" : thinking ? "thinking" : "live";
   const done = view.over || view.waiting || view.paused || view.state === "no_match";
   $("#play").disabled = done;
   $("#step").disabled = done || playing;
