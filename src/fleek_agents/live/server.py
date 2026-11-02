@@ -75,6 +75,11 @@ class Desk:
                 self.live = LiveSession(setup, self.settings, make(), label, embedder=self.embedder)
             except FormError as error:
                 raise BadRequest(str(error)) from None
+            except CassetteMiss:
+                raise BadRequest(
+                    "The recording doesn't cover these numbers. Use the scripted agents, or "
+                    "restart with --live to ask Claude now."
+                ) from None
             return self.live.view()
 
     def trace(self) -> dict[str, Any]:
