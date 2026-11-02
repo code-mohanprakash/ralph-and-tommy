@@ -136,14 +136,17 @@ def rerank(
         _ranking_model(list(by_id)),
         is_action=True,
     )
-    turn = take_turn(
-        client,
-        model=model,
-        system=SYSTEM,
-        prompt=describe(want, shortlist, sellers),
-        tools=[tool],
-        effort="low",
-    )
+    try:
+        turn = take_turn(
+            client,
+            model=model,
+            system=SYSTEM,
+            prompt=describe(want, shortlist, sellers),
+            tools=[tool],
+            effort="low",
+        )
+    except Exception:  # no network, an API error, a replay with no recording: never block a match
+        return _formula(ranked, None)
     ranking = turn.action[1] if turn.outcome is Outcome.ACTION and turn.action else None
     if not isinstance(ranking, _Ranking):
         return _formula(ranked, turn)  # no valid answer after corrections: the formula stands

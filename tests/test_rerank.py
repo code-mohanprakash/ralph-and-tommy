@@ -119,3 +119,13 @@ def test_a_lot_with_an_instruction_in_its_title_is_never_put_first() -> None:
 @needs_model
 def test_every_amount_in_claude_s_reasons_is_in_the_data() -> None:
     assert [a for r in recorded() for a in ungrounded_amounts(r)] == []
+
+
+def test_if_claude_can_t_be_reached_the_formula_s_order_stands() -> None:
+    class Down:
+        def create(self, **_params: object) -> object:
+            raise ConnectionError("no network")
+
+    order, sellers = ranked()
+    out = rerank(Down(), model=MODEL, want=build(CASES[0])[0], ranked=order, sellers=sellers)  # type: ignore[arg-type]
+    assert not out.by_ai and [s.lot.id for s in out.order] == [s.lot.id for s in order]
