@@ -21,6 +21,7 @@ from fleek_agents.agents.base import Agent, Send
 from fleek_agents.agents.rerank import SHORTLIST, Reranked
 from fleek_agents.config import Settings
 from fleek_agents.domain.events import EscalationReason, Event
+from fleek_agents.domain.fees import buyer_pays, seller_receives
 from fleek_agents.domain.models import (
     Buyer,
     ListingType,
@@ -238,13 +239,15 @@ class LiveSession:
         self.lots = {lot.id: lot for lot in self.market.lots}
         # Shown on each side's own screen only: the numbers that person typed (or the demo's
         # other sellers were given). Never in a line, a trace or Fleek's column.
-        self._buyer_secret = str(Pence(setup.buyer.top_price))
+        self._buyer_top = Pence(setup.buyer.top_price)
+        self._buyer_secret = str(self._buyer_top)
         forms = (setup.seller, *setup.others)
-        self._seller_secrets = {
-            f"lot-{1001 + 1000 * n + i}": str(Pence(line.floor))
+        self._seller_floors = {
+            f"lot-{1001 + 1000 * n + i}": Pence(line.floor)
             for n, form in enumerate(forms)
             for i, line in enumerate(form.stock)
         }
+        self._seller_secrets = {lot_id: str(p) for lot_id, p in self._seller_floors.items()}
         engine = make_engine("sqlite://", shared=True)
         Base.metadata.create_all(engine)
         self.session = Session(engine)
@@ -644,6 +647,90 @@ class LiveSession:
 
     # What each screen shows
 
+    def _summary(self) -> dict[str, Any] | None:
+        """Once a deal is agreed: what happened, for each side from its own numbers only.
+
+        The buyer's part compares with the buyer's own top price, the seller's with the seller's
+        own floor, and each goes only to that side's screen. Fleek's part has no limit in it.
+        """
+        state = self.state
+        if (
+            self.nid is None
+            or self.lot is None
+            or state
+            not in (
+                NegotiationState.PENDING_APPROVAL,
+                NegotiationState.CLOSED,
+            )
+        ):
+            return None
+        snap = self.log.saved(self.nid)
+        agreed = snap.agreed
+        if agreed is None:
+            return None
+        events = self.log.read(self.nid)
+        pieces = agreed.bundles * self.lot.pieces
+        price, shipping = agreed.base_price, self.lot.shipping
+        paid = buyer_pays(base_price=price, shipping=shipping, pieces=pieces)
+        got = seller_receives(base_price=price, pieces=pieces)
+        list_price = quote(self.lot, self.seller, bundles=agreed.bundles).base_price
+        cards = sum(1 for e in events if e.card is not None)
+        totals = self._totals()
+        hours = totals["simulated_hours"]  # the same measure as the metrics panel
+        waiting = [
+            str(a.who).replace("_", " ")
+            for w in pending(self.log, self.lots, self.settings.approval)
+            if w.negotiation_id == self.nid
+            for a in w.asks
+        ]
+        status = (
+            "Deal closed"
+            if state is NegotiationState.CLOSED
+            else "Agreed · waiting for " + " and ".join(waiting or ["a person"])
+        )
+        shared = {
+            "status": status,
+            "closed": state is NegotiationState.CLOSED,
+            "price": str(price),
+            "pieces": pieces,
+            "pct_of_list": round(100 * price.value / list_price.value)
+            if list_price.value
+            else None,
+            "list_price": str(list_price),
+            "cards": cards,
+            "hours": hours,
+        }
+        top = self._buyer_top.times(pieces)
+        floor = self._seller_floors.get(self.lot.id)
+        floor_total = floor.times(pieces) if floor is not None else None
+        return {
+            "buyer": shared
+            | {
+                "you_pay": str(paid.total),
+                "per_piece_delivered": str(Pence(round(paid.total.value / pieces))),
+                "under_your_top": str(top - paid.total) if paid.total <= top else None,
+            },
+            "seller": shared
+            | {
+                "you_receive": str(got.net),
+                "commission": str(got.commission),
+                "above_your_floor": (
+                    str(got.net - floor_total)
+                    if floor_total is not None and got.net >= floor_total
+                    else None
+                ),
+            },
+            "fleek": shared
+            | {
+                "order_value": str(paid.total),
+                "commission": str(got.commission),
+                "protection_fee": str(paid.protection_fee),
+                "ai_cost_cents": totals["cost_cents"],
+                "model_calls": totals["model_calls"],
+                "vault_stops": totals["vault_stops"],
+            },
+        }
+
     def _asked(self, who: Approver) -> bool:
         return any(
             a.who is who
@@ -716,6 +803,7 @@ class LiveSession:
         lot = _lot_facts(self.lot, self.bundles) if self.lot is not None else None
         over = state is None or state in FINAL_STATES
         q = quote(self.lot, self.seller, bundles=self.bundles) if self.lot else None
+        summary = self._summary()
         return {
             "agents": self.label,
             "time": _clock(self.clock.now()),
@@ -733,6 +821,7 @@ class LiveSession:
                 "description": self.lot.description if self.lot else None,
                 "lines": self._visible("buyer"),
                 "asked": self._asked(Approver.BUYER),
+                "summary": summary["buyer"] if summary else None,
             },
             "seller": {
                 "name": self.seller.name,
@@ -740,12 +829,14 @@ class LiveSession:
                 "final_say": str(self.seller.final_say),
                 "lines": self._visible("seller"),
                 "asked": self._asked(Approver.SELLER),
+                "summary": summary["seller"] if summary else None,
             },
             "fleek": {
                 "funnel": self.funnel,
                 "metrics": {"turns": self.metrics[-12:], "totals": self._totals()},
                 "lines": self._visible("fleek"),
                 "asked": self._asked(Approver.ACCOUNT_MANAGER),
+                "summary": summary["fleek"] if summary else None,
                 "watch": [
                     {"buyer": w.buyer_id, "why": w.why}
                     for w in watch_list(
