@@ -288,3 +288,13 @@ def test_once_agreed_each_side_gets_a_summary_from_its_own_numbers_only() -> Non
 def test_there_is_no_summary_before_a_deal() -> None:
     live = LiveSession(setup(), SETTINGS, scripted, "test")
     assert all(live.view()[k]["summary"] is None for k in ("buyer", "seller", "fleek"))
+
+
+def test_the_screen_shows_real_time_never_the_rules_simulated_clock() -> None:
+    live = run(LiveSession(setup(), SETTINGS, scripted, "test"))
+    view = live.view()
+    assert re.fullmatch(r"\d{2}:\d{2}:\d{2}", view["time"])
+    stamps = {line["at"] for side in ("buyer", "seller", "fleek") for line in view[side]["lines"]}
+    assert stamps and all(re.fullmatch(r"\d{2}:\d{2}:\d{2}", at) for at in stamps)
+    summary = view["buyer"]["summary"]
+    assert "hours" not in summary and summary["agent_seconds"] >= 0

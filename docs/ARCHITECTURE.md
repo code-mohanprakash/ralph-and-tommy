@@ -3,6 +3,9 @@
 **One line:** the AI decides what to offer; code decides what's allowed; the secret limits never go
 into the AI.
 
+The same design as three flowcharts, with the method behind each step:
+[architecture-diagrams.pdf](architecture-diagrams.pdf).
+
 ## The pieces
 
 ```mermaid
