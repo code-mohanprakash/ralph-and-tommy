@@ -270,3 +270,21 @@ def test_each_private_check_carries_its_band_word_for_the_screen() -> None:
     checks = [line for line in live.lines if line.kind == "check"]
     assert checks and all(c.band in {"strong", "acceptable", "stretch", "outside"} for c in checks)
     assert all(c.side in ("buyer", "seller") for c in checks)  # each only on its own side's screen
+
+
+def test_once_agreed_each_side_gets_a_summary_from_its_own_numbers_only() -> None:
+    live = run(LiveSession(setup(), SETTINGS, scripted, "test"))
+    view = live.view()
+    assert view["state"] == "pending_approval"
+    buyer, seller, fleek = (view[k]["summary"] for k in ("buyer", "seller", "fleek"))
+    assert buyer["you_pay"] and "you_receive" not in buyer and "above_your_floor" not in buyer
+    assert seller["you_receive"] and "you_pay" not in seller and "under_your_top" not in seller
+    assert not {"under_your_top", "above_your_floor", "you_pay", "you_receive"} & set(fleek)
+    floor, top = view["seller"]["secret"], view["buyer"]["secret"]
+    assert floor not in json.dumps(buyer) and top not in json.dumps(seller)
+    assert floor not in json.dumps(fleek) and top not in json.dumps(fleek)
+
+
+def test_there_is_no_summary_before_a_deal() -> None:
+    live = LiveSession(setup(), SETTINGS, scripted, "test")
+    assert all(live.view()[k]["summary"] is None for k in ("buyer", "seller", "fleek"))
