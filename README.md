@@ -8,6 +8,52 @@ Fleek's GTM Engineer role.
 - **The AI decides what to offer. Code decides what's allowed. The secret limits never go into the
   AI.**
 
+## Try it: three commands
+
+You need [uv](https://docs.astral.sh/uv/) (it installs Python 3.12 and everything else). No API
+key is needed: the Claude runs below replay recordings of real ones.
+
+```bash
+uv sync
+uv run fleek safety
+uv run fleek negotiate --mock --buyer buyer-0002
+```
+
+- **`fleek leak`**, **`fleek bench`** and **`fleek monitors`** are the deep dive's measurements;
+  [docs/SAFETY_CASE.md](docs/SAFETY_CASE.md) explains each.
+- **`fleek safety`** attacks an unsafe "naive" design (the secret in its prompt, free-text chat)
+  and the protected one the same way. From the recorded runs: the naive seller gave its exact
+  floor away under ordinary haggling; the protected agents agreed no deal outside a limit, and when
+  Claude Tommy tried to counter below his floor, the harness refused to send it.
+- **`fleek negotiate --mock`** takes one buyer from the seeded market through matching and a
+  negotiation with scripted agents, and shows what each side would pay and receive after Fleek's
+  fees (buyer-0002 closes at £6.95 a piece; buyer-0001 shows a negotiation that ends with no
+  deal). The first run downloads a 64 MB local embedding model; add `--matcher words` to skip it.
+
+More:
+
+```bash
+uv run fleek simulate --agents claude-haiku-5-5 --buyers 30   # replays a recorded Claude run
+uv run fleek negotiate --mock --buyer buyer-0002 --db fleek.db  # keep the deal in a file...
+uv run fleek approvals --db fleek.db                            # ...see what waits, and for whom
+uv run fleek approve neg-0001 --as account_manager --db fleek.db  # one person's yes
+uv run fleek digest --db fleek.db                               # the account managers' call list
+uv run fleek summary neg-0001 --db fleek.db                     # what happened, and what to do
+uv run fleek bench                                              # 40 generated deals, scored with 95% intervals
+uv run fleek leak                                               # how close attackers get to Tommy's floor
+uv run fleek leak --privacy                                     # ...with the secret margin on
+uv run fleek leak --sweep                                       # every setting, and the trade-off chart
+uv run fleek leak --route matching                              # what matching's yes/no gives away
+uv run fleek rerank --reasons                                   # Claude's re-rank against the formula, 12 cases
+uv run fleek leak --firm                                        # firm mode against haggling: deals, commission, leaks
+uv run fleek bench --suite tactics --agents claude-haiku-5-5   # pressure in the listing, vs a control
+uv run fleek bench --suite redteam --agents claude-haiku-5-5 --reader  # an attacker that adapts
+uv run fleek monitors                                           # what each monitor catches, and false alarms
+```
+
+To run Claude live, put an Anthropic key in `.env` (copy `.env.example`) and add `--live` to
+`fleek live`, `fleek safety` or `fleek simulate`. Spend is capped in `market.toml`.
+
 ## The deep dive: can someone work out a secret limit?
 
 Fleek's brief says to go deep on one thing. This repo's one thing: **agents that haggle for you
@@ -91,52 +137,6 @@ step, and when a person is needed the account manager gets a summary with Approv
   repo (no key needed). Add `--live` to ask Claude now with any numbers.
 - Everything loads from your computer, so it works without wifi.
 
-## Try it: three commands
-
-You need [uv](https://docs.astral.sh/uv/) (it installs Python 3.12 and everything else). No API
-key is needed: the Claude runs below replay recordings of real ones.
-
-```bash
-uv sync
-uv run fleek safety
-uv run fleek negotiate --mock --buyer buyer-0002
-```
-
-- **`fleek leak`**, **`fleek bench`** and **`fleek monitors`** are the deep dive's measurements;
-  [docs/SAFETY_CASE.md](docs/SAFETY_CASE.md) explains each.
-- **`fleek safety`** attacks an unsafe "naive" design (the secret in its prompt, free-text chat)
-  and the protected one the same way. From the recorded runs: the naive seller gave its exact
-  floor away under ordinary haggling; the protected agents agreed no deal outside a limit, and when
-  Claude Tommy tried to counter below his floor, the harness refused to send it.
-- **`fleek negotiate --mock`** takes one buyer from the seeded market through matching and a
-  negotiation with scripted agents, and shows what each side would pay and receive after Fleek's
-  fees (buyer-0002 closes at £6.95 a piece; buyer-0001 shows a negotiation that ends with no
-  deal). The first run downloads a 64 MB local embedding model; add `--matcher words` to skip it.
-
-More:
-
-```bash
-uv run fleek simulate --agents claude-haiku-5-5 --buyers 30   # replays a recorded Claude run
-uv run fleek negotiate --mock --buyer buyer-0002 --db fleek.db  # keep the deal in a file...
-uv run fleek approvals --db fleek.db                            # ...see what waits, and for whom
-uv run fleek approve neg-0001 --as account_manager --db fleek.db  # one person's yes
-uv run fleek digest --db fleek.db                               # the account managers' call list
-uv run fleek summary neg-0001 --db fleek.db                     # what happened, and what to do
-uv run fleek bench                                              # 40 generated deals, scored with 95% intervals
-uv run fleek leak                                               # how close attackers get to Tommy's floor
-uv run fleek leak --privacy                                     # ...with the secret margin on
-uv run fleek leak --sweep                                       # every setting, and the trade-off chart
-uv run fleek leak --route matching                              # what matching's yes/no gives away
-uv run fleek rerank --reasons                                   # Claude's re-rank against the formula, 12 cases
-uv run fleek leak --firm                                        # firm mode against haggling: deals, commission, leaks
-uv run fleek bench --suite tactics --agents claude-haiku-5-5   # pressure in the listing, vs a control
-uv run fleek bench --suite redteam --agents claude-haiku-5-5 --reader  # an attacker that adapts
-uv run fleek monitors                                           # what each monitor catches, and false alarms
-```
-
-To run Claude live, put an Anthropic key in `.env` (copy `.env.example`) and add `--live` to
-`fleek live`, `fleek safety` or `fleek simulate`. Spend is capped in `market.toml`.
-
 ## What's here
 
 | | |
@@ -181,3 +181,7 @@ make check   # lint, strict types, import rules, tests, key scan; CI runs the sa
 | `scripts/` | dev tools, such as the API key scan |
 | `docs/` | assumptions, architecture, results, design decisions |
 | `market.toml` | every number we expect to tune: bands, rounds, models, spend caps, approval |
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).
