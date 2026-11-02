@@ -82,8 +82,8 @@ Expect these to be challenged. None of them has been checked with Fleek's real d
 
 The brief describes about 50,000 buyers and 1,000 sellers. The build uses a seeded fake market of
 **500 buyers, 50 sellers and about 1,500 lots**, the same every run. Prices are in pounds, stored as
-whole pence. It's designed for the full size and tested at the small one; `docs/` will say what
-changes at full scale.
+whole pence. It's designed for the full size and tested at the small one;
+[SCALE_AND_ROLLOUT.md](SCALE_AND_ROLLOUT.md) says what changes at full scale.
 
 ## If a fact changes
 

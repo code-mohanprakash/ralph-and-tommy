@@ -3,6 +3,7 @@ name = "ralph-and-tommy"
 version = "0.1.0"
 description = "Buyer and seller agents that negotiate bulk secondhand-clothing deals, with secret limits kept out of the AI."
 readme = "README.md"
+license = "MIT"
 requires-python = ">=3.12"
 dependencies = [
     "anthropic>=2.3.0",
