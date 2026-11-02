@@ -4,17 +4,24 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Ralph &amp; Tommy · Live</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&display=swap">
   <link rel="stylesheet" href="/static/live.css">
 </head>
 <body>
 <header class="bar">
-  <div>
-    <h1>Ralph &amp; Tommy <span class="tag">live</span></h1>
-    <p class="muted small" id="agents-label">Type in both sides, then watch them negotiate.</p>
+  <div class="brand">
+    <span class="mark" aria-hidden="true">R&amp;T</span>
+    <div>
+      <h1>Ralph &amp; Tommy</h1>
+      <p class="sub" id="agents-label">AI negotiation for Fleek's bulk marketplace</p>
+    </div>
   </div>
   <div class="bar-right">
+    <span class="live-pill"><span class="dot" aria-hidden="true"></span>Live demo</span>
     <span class="clock" id="clock" hidden></span>
-    <button id="restart" hidden>New session</button>
+    <button class="ghost" id="restart" hidden>New session</button>
   </div>
 </header>
 
@@ -26,10 +33,13 @@
       <li data-step="2">2 · What the buyer wants</li>
       <li data-step="3">3 · Who negotiates</li>
     </ol>
-    <p class="intro">A ready-made market is filled in: one seller with 10 lots, and a buyer. Change
-      anything you like. The two secret numbers (the seller's floor and the buyer's top price) go to
-      Fleek's vault only: no AI ever sees them.
-      <button class="link" id="use-preset" type="button">Reset to the ready-made market</button></p>
+    <div class="hero">
+      <h2 class="hero-title">Two agents haggle. <span class="hl">Neither sees the secret.</span></h2>
+      <p class="intro">A ready-made market is filled in: one seller with 10 lots, and a buyer.
+        Change anything you like. The two secret numbers, the seller's floor and the buyer's top
+        price, go to Fleek's vault only. No AI ever sees them.
+        <button class="link" id="use-preset" type="button">Reset to the ready-made market</button></p>
+    </div>
 
     <form id="form" novalidate>
       <fieldset class="step" data-step="1">
@@ -105,15 +115,17 @@
   <!-- The two screens -->
   <section id="screens" hidden>
     <div class="run">
-      <button class="primary" id="play">▶ Run</button>
-      <button id="step">One turn</button>
       <span class="status" id="status" aria-live="polite"></span>
+      <div class="run-buttons">
+        <button class="ghost" id="step">One turn</button>
+        <button class="primary" id="play">▶ Run</button>
+      </div>
     </div>
     <div class="split">
       <article class="screen" id="buyer-screen" aria-label="The buyer's screen">
         <header class="screen-head ralph">
-          <div><span class="who">Buyer</span><h2 data-field="name"></h2></div>
-          <span class="avatar">Ralph</span>
+          <span class="avatar" aria-hidden="true">R</span>
+          <div><span class="who">Buyer's screen · Ralph negotiates</span><h2 data-field="name"></h2></div>
         </header>
         <p class="secret-chip" data-field="secret"></p>
         <div class="lot" data-field="lot"></div>
@@ -123,8 +135,8 @@
       </article>
       <article class="screen" id="seller-screen" aria-label="The seller's screen">
         <header class="screen-head tommy">
-          <div><span class="who">Seller</span><h2 data-field="name"></h2></div>
-          <span class="avatar">Tommy</span>
+          <span class="avatar" aria-hidden="true">T</span>
+          <div><span class="who">Seller's screen · Tommy negotiates</span><h2 data-field="name"></h2></div>
         </header>
         <p class="secret-chip" data-field="secret"></p>
         <div class="lot" data-field="lot"></div>
@@ -134,7 +146,7 @@
       </article>
     </div>
     <article class="fleek" id="fleek-screen" aria-label="Fleek's view">
-      <header><h2>Fleek</h2><span class="muted small">matching, the referee, account managers</span></header>
+      <header><h2><span class="yellow-dot" aria-hidden="true"></span>Fleek's view</h2><span class="small fleek-sub">matching, the referee, account managers, metrics</span></header>
       <section class="funnel" aria-label="Matching">
         <h3>Matching: how this buyer was matched</h3>
         <ol class="steps-row" data-field="funnel-steps"></ol>
@@ -148,7 +160,7 @@
         <div><h3>Referee and account manager</h3><ol class="timeline compact" data-field="lines"></ol>
           <div class="ask" data-field="ask" hidden></div></div>
         <div><h3>Watch list</h3><ul data-field="watch"></ul></div>
-        <div><h3>Metrics</h3><dl class="metrics" data-field="metrics"></dl>
+        <div><h3>Metrics</h3><div class="metrics" data-field="metrics"></div>
           <a href="/api/trace" download="ralph-and-tommy-trace.json" class="small">Download the trace (JSON, no secrets)</a></div>
       </div>
     </article>
