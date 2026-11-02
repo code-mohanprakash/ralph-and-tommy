@@ -106,8 +106,14 @@ class Line:
     band: str | None = None  # on a private check: the word the vault answered with
 
 
-def _clock(at: datetime) -> str:
-    return f"{at:%a} {at.day} {at:%b}, {at:%H:%M}"
+def _now() -> str:
+    """The real time on this computer, for the screen.
+
+    The session also keeps a simulated clock (self.clock) that only the rules use, for Make an
+    Offer's 48-hour expiry. It moves an hour per turn, so it is never shown: what's on screen is
+    real.
+    """
+    return datetime.now().astimezone().strftime("%H:%M:%S")
 
 
 def _lot_facts(lot: Lot, bundles: int) -> dict[str, Any]:
@@ -282,7 +288,7 @@ class LiveSession:
     def _say(self, side: str, who: str, text: str, *, at: str | None = None, **extra: Any) -> None:
         if "seller" not in extra and side in ("both", "seller") and self.lot is not None:
             extra["seller"] = self.lot.seller_id
-        self.lines.append(Line(side, who, text, at or _clock(self.clock.now()), **extra))
+        self.lines.append(Line(side, who, text, at or _now(), **extra))
 
     def _match(self) -> None:
         """The funnel: filters, the vault's yes or no, then ranking on public facts."""
@@ -454,7 +460,7 @@ class LiveSession:
         nid = self.nid
         if self.state in FINAL_STATES or self.state is NegotiationState.PENDING_APPROVAL:
             return False
-        before, when = len(self.log.read(nid)), _clock(self.clock.now())
+        before, when = len(self.log.read(nid)), _now()
         for w in self.watched.values():
             w.action, w.asked = None, []
         turns_before = {who: len(_turns(w)) for who, w in self.watched.items()}
@@ -676,7 +682,6 @@ class LiveSession:
         list_price = quote(self.lot, self.seller, bundles=agreed.bundles).base_price
         cards = sum(1 for e in events if e.card is not None)
         totals = self._totals()
-        hours = totals["simulated_hours"]  # the same measure as the metrics panel
         waiting = [
             str(a.who).replace("_", " ")
             for w in pending(self.log, self.lots, self.settings.approval)
@@ -698,7 +703,8 @@ class LiveSession:
             else None,
             "list_price": str(list_price),
             "cards": cards,
-            "hours": hours,
+            "agent_seconds": totals["wall_seconds"],  # measured, as in the metrics panel
+            "model_calls": totals["model_calls"],
         }
         top = self._buyer_top.times(pieces)
         floor = self._seller_floors.get(self.lot.id)
@@ -762,7 +768,8 @@ class LiveSession:
             "wall_seconds": round(sum(r["ms"] for r in rows) / 1000, 1),
             "lots_tried": len(self.tried),
             "cards": cards,
-            "simulated_hours": round((self.clock.now() - started).total_seconds() / 3600),
+            # The rules' simulated clock (an hour a turn, for the 48-hour expiry), not real time.
+            "rule_clock_hours": round((self.clock.now() - started).total_seconds() / 3600),
             "price_vs_list": (
                 f"{100 * agreed.base_price.value / self.lot.base_price.value:.0f}% of list"
                 if agreed is not None and self.lot is not None
@@ -806,7 +813,7 @@ class LiveSession:
         summary = self._summary()
         return {
             "agents": self.label,
-            "time": _clock(self.clock.now()),
+            "time": _now(),
             "state": str(state) if state is not None else "no_match",
             "over": over,
             "waiting": state is NegotiationState.PENDING_APPROVAL,

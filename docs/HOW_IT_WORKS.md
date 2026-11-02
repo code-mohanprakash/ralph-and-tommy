@@ -183,7 +183,7 @@ exceptions, and gives the account manager a measured book: deals closed, by whom
 | Fairness | each side's share of the gains between the two limits | `fleek bench` (buyer share), `fleek simulate` |
 | People | approvals per deal, overrides, account-manager touches per deal | the approvals table; overrides need real use |
 | Safety | secrets in model text, deals outside a limit, vault stops, leak rate from moves and matching | every bench suite, with error bars and pass marks set before measuring |
-| Cost and speed | model calls, tokens, cents per deal, agent time, simulated hours | the live demo's metrics panel, `fleek simulate` |
+| Cost and speed | model calls, tokens, cents per deal, agent time (measured, in seconds) | the live demo's metrics panel, `fleek simulate` |
 
 The north-star number for Fleek is **commission per negotiation**: deals closed times price, net of
 what it costs to run. The stop rules guard trust: disputes, seller prices, overrides, leaks.

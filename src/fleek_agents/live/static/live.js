@@ -238,7 +238,9 @@ function summaryCard(sum, side) {
     if (sum.above_your_floor === "£0.00") rows.push(row("Against your floor", "right at it"));
     else if (sum.above_your_floor) rows.push(row("Above your floor by", sum.above_your_floor));
   }
-  rows.push(row("How it went", `${sum.cards} cards, ${sum.hours}h of simulated back-and-forth`));
+  rows.push(row("How it went", sum.model_calls
+    ? `${sum.cards} cards, ${sum.agent_seconds}s of agent time, ${sum.model_calls} AI calls`
+    : `${sum.cards} cards, by scripted agents (no AI)`));
   const note = side === "buyer" ? "Your top price was never shown to the seller or to any AI."
     : "Your floor was never shown to the buyer or to any AI.";
   return el("li", { class: `summary${sum.closed ? " closed" : ""}` },
@@ -372,7 +374,7 @@ function renderMetrics(root, m) {
     ["Agent turns", t.agent_turns], ["Model calls", t.model_calls],
     ["Tokens", `${t.tokens_in.toLocaleString("en-GB")} in · ${t.tokens_out.toLocaleString("en-GB")} out`], ["AI cost", `${t.cost_cents}¢`],
     ["Agent time", `${t.wall_seconds}s`], ["Lots tried", t.lots_tried], ["Cards", t.cards],
-    ["Simulated time", `${t.simulated_hours}h`], ["Deal price", t.price_vs_list || "–"],
+    ["Deal price", t.price_vs_list || "–"],
     ["Vault stops", t.vault_stops],
   ];
   $('[data-field="metrics"]', root).replaceChildren(...pairs.map(([k, v]) =>
@@ -404,7 +406,7 @@ function render(view) {
         tile(fs.order_value, "order value"),
         tile(fs.commission, "Fleek's 15% commission"),
         tile(fs.protection_fee, "buyer protection fee"),
-        tile(`${fs.cards} cards`, `${fs.hours}h simulated`),
+        tile(`${fs.cards} cards`, fs.model_calls ? `${fs.agent_seconds}s of agent time` : "scripted agents, no AI"),
         tile(`${fs.ai_cost_cents}¢`, `AI cost, ${fs.model_calls} calls`),
         tile(fs.vault_stops, "moves the vault stopped")));
   }
