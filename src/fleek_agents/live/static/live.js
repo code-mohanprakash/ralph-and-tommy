@@ -213,7 +213,42 @@ function withAmounts(text) {
   return parts.map((p, i) => (i % 2 ? el("strong", { class: "amount", text: p }) : document.createTextNode(p)));
 }
 
-function lineItem(line, mine) {
+// Who's speaking. Your own agent is "your agent"; the other side is named by its business.
+function speaker(who, mine, names) {
+  const agent = NAMES[who] || who;
+  if (!names) return agent;
+  if (who === mine) return `${agent} · your agent`;
+  return names[who] ? `${agent} · for ${names[who]}` : agent;
+}
+
+function summaryCard(sum, side) {
+  const row = (label, value, strong = false) =>
+    el("div", { class: "sum-row" }, el("span", { text: label }), el(strong ? "strong" : "b", { text: value }));
+  const rows = [
+    row("Price", `${sum.price} a piece`, true),
+    row("Pieces", String(sum.pieces)),
+    row("Against list", sum.pct_of_list != null ? `${sum.pct_of_list}% of ${sum.list_price}` : "–"),
+  ];
+  if (side === "buyer") {
+    rows.push(row("You pay, delivered", `${sum.you_pay} (${sum.per_piece_delivered} a piece)`));
+    if (sum.under_your_top === "£0.00") rows.push(row("Against your top price", "right at it"));
+    else if (sum.under_your_top) rows.push(row("Under your top price by", sum.under_your_top));
+  } else if (side === "seller") {
+    rows.push(row("You receive, after Fleek's 15%", sum.you_receive));
+    if (sum.above_your_floor === "£0.00") rows.push(row("Against your floor", "right at it"));
+    else if (sum.above_your_floor) rows.push(row("Above your floor by", sum.above_your_floor));
+  }
+  rows.push(row("How it went", `${sum.cards} cards, ${sum.hours}h of simulated back-and-forth`));
+  const note = side === "buyer" ? "Your top price was never shown to the seller or to any AI."
+    : "Your floor was never shown to the buyer or to any AI.";
+  return el("li", { class: `summary${sum.closed ? " closed" : ""}` },
+    el("div", { class: "sum-head" }, el("span", { class: "sum-kicker", text: "Deal summary" }),
+      el("span", { class: "sum-status", text: sum.status })),
+    el("div", { class: "sum-rows" }, ...rows),
+    el("p", { class: "sum-note", text: note }));
+}
+
+function lineItem(line, mine, names) {
   const at = el("span", { class: "at", text: `${line.at}` });
   const cls = {
     card: `card ${line.who}${line.who === mine ? " mine" : ""}`,
@@ -226,7 +261,7 @@ function lineItem(line, mine) {
       el("span", { class: `band ${line.band || ""}`, text: line.band || "" }),
       el("span", { class: "check-text" }, ...withAmounts(line.text)));
   }
-  const head = line.kind === "card" ? el("span", { class: "speaker", text: NAMES[line.who] || line.who }) : null;
+  const head = line.kind === "card" ? el("span", { class: "speaker", text: speaker(line.who, mine, names) }) : null;
   return el("li", { class: cls }, head, at, el("span", { class: "text" }, ...withAmounts(line.text)));
 }
 
@@ -249,7 +284,10 @@ function renderScreen(root, data, view, side) {
     el("span", { class: "secret-note", text: "Only you and the vault see this. Never the AI." }),
   ] : []));
   $('[data-field="lot"]', root).replaceChildren(...lotBox(view, side));
-  fillLines($('[data-field="lines"]', root), data.lines.map((l) => lineItem(l, agent)));
+  const names = { ralph: view.buyer.name, tommy: view.seller.name };
+  const items = data.lines.map((l) => lineItem(l, agent, names));
+  if (data.summary) items.push(summaryCard(data.summary, side));
+  fillLines($('[data-field="lines"]', root), items);
   const ask = $('[data-field="ask"]', root);
   ask.hidden = !data.asked;
   if (data.asked) {
@@ -284,6 +322,10 @@ function renderFunnel(root, view) {
     stepTile(fu.possible, "the vault says a price can work"),
     stepTile(ranked, fu.rerank && fu.rerank.by === "claude" ? "ranked, then re-ranked by Ralph" : "ranked"));
   const current = view.lot ? view.lot.id : null;
+  const picked = fu.rows.find((r) => r.lot === current);
+  $('[data-field="picked"]', root).textContent = picked
+    ? `Negotiating now: ${picked.title}, from ${picked.seller} (#${picked.ai_rank || picked.rank} of ${ranked}).`
+    : "No lot can work for this buyer, so no agent is called.";
   const filtered = fu.rows.filter((r) => r.step === "filters").length;
   const toggle = el("tr", { class: "toggle" }, el("td", { colspan: "4" },
     el("button", {
@@ -345,9 +387,27 @@ function render(view) {
   renderScreen($("#buyer-screen"), view.buyer, view, "buyer");
   renderScreen($("#seller-screen"), view.seller, view, "seller");
   const f = $("#fleek-screen");
-  renderFunnel(f, view);
+  renderFunnel($("#match-screen"), view);
   renderMetrics(f, view.fleek.metrics);
-  fillLines($('[data-field="lines"]', f), view.fleek.lines.map((l) => lineItem(l, "")));
+  fillLines($('[data-field="lines"]', f), view.fleek.lines.map((l) =>
+    lineItem(l, "", { ralph: view.buyer.name, tommy: view.seller.name })));
+  const deal = $('[data-field="deal"]', f);
+  const fs = view.fleek.summary;
+  deal.hidden = !fs;
+  if (fs) {
+    const tile = (v, k) => el("div", { class: "tile" }, el("b", { text: String(v) }), el("span", { text: k }));
+    deal.replaceChildren(
+      el("div", { class: "deal-head" }, el("h3", { text: "The deal" }), el("span", { class: "sum-status", text: fs.status })),
+      el("div", { class: "deal-tiles" },
+        tile(`${fs.price}`, `a piece, ${fs.pct_of_list}% of list`),
+        tile(fs.pieces, "pieces"),
+        tile(fs.order_value, "order value"),
+        tile(fs.commission, "Fleek's 15% commission"),
+        tile(fs.protection_fee, "buyer protection fee"),
+        tile(`${fs.cards} cards`, `${fs.hours}h simulated`),
+        tile(`${fs.ai_cost_cents}¢`, `AI cost, ${fs.model_calls} calls`),
+        tile(fs.vault_stops, "moves the vault stopped")));
+  }
   $('[data-field="watch"]', f).replaceChildren(...(view.fleek.watch.length
     ? view.fleek.watch.map((w) => el("li", { text: `${w.buyer}: ${w.why}` }))
     : [el("li", { class: "muted", text: "Nobody flagged." })]));
@@ -445,6 +505,13 @@ async function init() {
     } catch (error) {
       showError(error.message);
     }
+  });
+  $("#toggle-match").addEventListener("click", () => {
+    const body = $('[data-field="match-body"]');
+    const open = body.hidden;
+    body.hidden = !open;
+    $("#toggle-match").textContent = open ? "Hide matching" : "Show how it was matched";
+    $("#toggle-match").setAttribute("aria-expanded", String(open));
   });
   $("#play").addEventListener("click", () => { setPlaying(!playing); if (playing) run(); });
   $("#step").addEventListener("click", oneTurn);

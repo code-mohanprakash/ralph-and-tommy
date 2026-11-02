@@ -236,7 +236,7 @@ summary { cursor: pointer; font-size: 13px; font-weight: 700; margin-bottom: 8px
 .yellow-dot { width: 12px; height: 12px; border-radius: 3px; background: var(--yellow); }
 .fleek-sub { color: #98A2B3; font-weight: 600; }
 .fleek h3 { color: var(--yellow); }
-.fleek-body { display: grid; grid-template-columns: 1.5fr 1fr 1.2fr; gap: 24px; margin-top: 22px; }
+.fleek-body { display: grid; grid-template-columns: 1.5fr 1fr 1.2fr; gap: 24px; }
 .fleek ul { list-style: none; padding: 0; margin: 0; font-size: 13px; display: grid; gap: 6px; color: #D0D5DD; }
 .fleek .muted { color: #98A2B3; }
 .fleek .ask { margin: 10px 0 0; background: rgba(248, 198, 66, .12); border-color: var(--yellow); color: #fff; }
@@ -249,7 +249,13 @@ summary { cursor: pointer; font-size: 13px; font-weight: 700; margin-bottom: 8px
 .fleek button.ok { background: var(--yellow); color: var(--ink); border-color: var(--yellow); }
 .fleek button.link { color: var(--yellow); }
 
-.funnel { border-bottom: 1px solid #2A2A2A; padding-bottom: 20px; }
+.funnel { padding-top: 4px; }
+.match { margin: 0 0 16px; }
+.match-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.match-head h2 { font-size: 18px; font-weight: 800; display: inline-flex; align-items: center; gap: 10px; }
+.match-head p { margin-top: 4px; }
+.match > header { margin-bottom: 16px; }
+.match .funnel[hidden] + * { display: none; }
 .steps-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; list-style: none; padding: 0; margin: 0 0 16px; }
 .steps-row li { background: var(--ink-2); border: 1px solid #2A2A2A; border-radius: 10px; padding: 12px 14px; display: grid; gap: 2px; position: relative; }
 .steps-row li b { font-size: 26px; font-weight: 800; color: var(--yellow); letter-spacing: -0.02em; line-height: 1.1; }
@@ -294,3 +300,27 @@ summary { cursor: pointer; font-size: 13px; font-weight: 700; margin-bottom: 8px
   .status[data-tone="thinking"]::before { animation: none; }
   button:active:not(:disabled) { transform: none; }
 }
+
+/* Deal summary: the last card in each conversation, and a strip in Fleek's view */
+.timeline .summary {
+  max-width: 100%; align-self: stretch; background: var(--card); border: 1.5px solid var(--ink);
+  border-radius: 12px; padding: 14px 16px; box-shadow: 0 6px 18px -8px rgba(16, 24, 40, .25);
+}
+.timeline .summary.closed { border-color: var(--strong); }
+.sum-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.sum-kicker { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; background: var(--yellow); color: var(--ink); border-radius: 3px; padding: 2px 8px; }
+.sum-status { font-size: 12px; font-weight: 700; color: var(--text-2); }
+.summary.closed .sum-status { color: var(--strong); }
+.sum-rows { display: grid; gap: 6px; }
+.sum-row { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--text-2); font-weight: 600; border-bottom: 1px dashed var(--line); padding-bottom: 6px; }
+.sum-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.sum-row b, .sum-row strong { color: var(--ink); text-align: right; }
+.sum-row strong { font-size: 18px; font-weight: 800; }
+.sum-note { margin-top: 10px; font-size: 12px; color: var(--strong); font-weight: 700; }
+.sum-note::before { content: "🔒 "; }
+.fleek .deal { border: 1px solid rgba(248, 198, 66, .45); background: rgba(248, 198, 66, .06); border-radius: 12px; padding: 14px 16px; margin: 0 0 20px; }
+.deal-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+.deal-head h3 { margin: 0; }
+.fleek .deal .sum-status { color: #D0D5DD; }
+.deal-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 900px) { .deal-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

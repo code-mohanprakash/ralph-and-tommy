@@ -121,6 +121,21 @@
         <button class="primary" id="play">▶ Run</button>
       </div>
     </div>
+    <article class="fleek match" id="match-screen" aria-label="Matching">
+      <header class="match-head">
+        <div><h2><span class="yellow-dot" aria-hidden="true"></span>Step 1 · Fleek finds the right lot</h2>
+          <p class="small fleek-sub" data-field="picked"></p></div>
+        <button type="button" class="ghost" id="toggle-match" aria-expanded="true">Hide matching</button>
+      </header>
+      <section class="funnel" data-field="match-body">
+        <ol class="steps-row" data-field="funnel-steps"></ol>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Result</th><th>Lot</th><th>Seller</th><th>Why</th></tr></thead>
+          <tbody data-field="funnel-rows"></tbody>
+        </table></div>
+        <p class="muted small" data-field="weights"></p>
+      </section>
+    </article>
     <div class="split">
       <article class="screen" id="buyer-screen" aria-label="The buyer's screen">
         <header class="screen-head ralph">
@@ -146,16 +161,8 @@
       </article>
     </div>
     <article class="fleek" id="fleek-screen" aria-label="Fleek's view">
-      <header><h2><span class="yellow-dot" aria-hidden="true"></span>Fleek's view</h2><span class="small fleek-sub">matching, the referee, account managers, metrics</span></header>
-      <section class="funnel" aria-label="Matching">
-        <h3>Matching: how this buyer was matched</h3>
-        <ol class="steps-row" data-field="funnel-steps"></ol>
-        <div class="table-wrap"><table>
-          <thead><tr><th>Result</th><th>Lot</th><th>Seller</th><th>Why</th></tr></thead>
-          <tbody data-field="funnel-rows"></tbody>
-        </table></div>
-        <p class="muted small" data-field="weights"></p>
-      </section>
+      <header><h2><span class="yellow-dot" aria-hidden="true"></span>Fleek's view</h2><span class="small fleek-sub">the referee, account managers, the watch list, metrics</span></header>
+      <section class="deal" data-field="deal" hidden></section>
       <div class="fleek-body">
         <div><h3>Referee and account manager</h3><ol class="timeline compact" data-field="lines"></ol>
           <div class="ask" data-field="ask" hidden></div></div>
