@@ -44,8 +44,9 @@ Three ways to spend less, none built yet:
 - **Use the scripted agents where they're good enough.** In the 30-buyer run they closed more
   deals than Claude (83% vs 70%) but at worse prices for buyers (5.1% vs 11.6% below list), at no
   model cost. A mix (scripted for small, simple deals) is worth testing.
-- **Don't route big deals to Sonnet yet.** `market.toml` sends deals of £1,000 or more to Sonnet
-  5.5. On the same 10 buyers it cost about 13 times as much per deal as Haiku and did no better.
+- **Don't route big deals to Sonnet yet.** `market.toml` names a £1,000 cut-off for Sonnet 5.5 and
+  `llm/routing.py` implements it, but no command uses it yet. On the same 10 buyers Sonnet cost
+  about 13 times as much per deal as Haiku and did no better.
   Ten buyers is too few to decide on, so before rollout: a larger, paired comparison on big deals.
 
 Prompt caching isn't used. The playbooks are short, so the saving is uncertain; measure before

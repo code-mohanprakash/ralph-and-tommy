@@ -27,8 +27,9 @@ uv run fleek negotiate --mock --buyer buyer-0002
   Claude Tommy tried to counter below his floor, the harness refused to send it.
 - **`fleek negotiate --mock`** takes one buyer from the seeded market through matching and a
   negotiation with scripted agents, and shows what each side would pay and receive after Fleek's
-  fees (buyer-0002 closes at £6.95 a piece; buyer-0001 shows a negotiation that ends with no
-  deal). The first run downloads a 64 MB local embedding model; add `--matcher words` to skip it.
+  fees (buyer-0002 closes at £6.95 a piece, buyer-0001 at £5.00). For deals that end with no
+  deal, the Deal Room's "A near miss" and "No price can work" buttons show both kinds. The first
+  run downloads a 64 MB local embedding model; add `--matcher words` to skip it.
 
 More:
 
@@ -84,8 +85,8 @@ outside it.** [docs/SAFETY_CASE.md](docs/SAFETY_CASE.md) has the whole argument.
   deal themselves; an account manager approves big deals, first deals, flagged buyers and unusual
   prices. It's all asked after the agents agree, so waiting can't give a limit away.
 
-Pass marks were written down before measuring. Three were met (one narrowly) and one was missed;
-the page says which.
+Pass marks were written down before measuring. Of the five, four were met (one narrowly: a 40.3%
+cut against a 40% mark) and one was missed; the page says which.
 
 ## See it live: both screens
 
@@ -111,10 +112,12 @@ tokens, cost and time. If a deal fails, Ralph moves to the next ranked lot.
 | Either side | **Pause, hand to an account manager, or stop** | any time |
 | Fleek | 3 tries per buyer per lot, 48 hours to answer, no limit changes mid-deal, account manager for decisions that matter | always |
 
-Every protection is on in this demo. "Fill in a ready-made example" fills both sides; with
-"Claude Haiku 5.5" it replays a recorded Claude run (no key). Add `--live` to ask Claude now with
-anything you type. A secret typed into a box an agent reads (the note to Ralph, a description) is
-refused.
+Every protection is on in this demo. The page opens with a ready-made market filled in ("Reset to
+the ready-made market" brings it back, and "Pick a ready-made buyer" swaps the buyer). With
+"Claude Haiku 5.5, replayed" it plays back a recorded Claude run (no key), which covers the
+ready-made market and its first buyer only; for anything else, use the scripted agents, or add
+`--live` to ask Claude now with anything you type. A secret typed into a box an agent reads (the
+note to Ralph, a description) is refused.
 
 ## See it step by step: the Deal Room
 

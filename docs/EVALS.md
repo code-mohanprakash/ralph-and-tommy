@@ -41,7 +41,8 @@ Recorded 30 Oct 2026. Same seeded market and rules for every row.
   first thing to tune, and this table is how to tell whether a change helped.
 - **Sonnet 5.5 cost about 13 times as much per deal as Haiku 5.5 and did no better on the same
   10 buyers.** Ten buyers is far too few to conclude much, but it's the evidence there is: it
-  doesn't support routing deals to Sonnet by size yet (`market.toml [models]` does, from £1,000).
+  doesn't support routing deals to Sonnet by size yet. `market.toml [models]` names a £1,000 cut-off
+  and `llm/routing.py` implements it, but no command uses it: every run uses the model you pick.
   The next step is a larger, paired comparison on big deals before deciding.
 - Total spend for both Claude runs: about 85 US cents (Haiku 30 buyers, 542 model calls; Sonnet
   10 buyers, 133 calls).
