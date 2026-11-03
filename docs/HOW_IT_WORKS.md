@@ -13,13 +13,14 @@ what's **built and tested** here and what's **a plan**.
 | **The live demo** | `uv run fleek live` | Onboarding (a ready-made market of 4 sellers, 18 lots, 3 buyers), then the buyer's and the seller's screens side by side, and Fleek's column: the matching funnel, the referee, approvals, the watch list, metrics |
 | The Deal Room | `uv run fleek room` | One negotiation, step by step, in a 3D scene |
 | The deep dive | `uv run fleek leak`, `fleek bench`, `fleek monitors` | Every leak measured, with error bars ([SAFETY_CASE.md](SAFETY_CASE.md)) |
-| The market at scale | `uv run fleek simulate` | 500 buyers through matching and negotiation; Claude replayed |
+| The market at scale | `uv run fleek simulate` | 500 buyers through matching and negotiation with scripted agents; Claude replayed on 30 buyers (Haiku) or 10 (Sonnet) |
 | A person's tools | `fleek approvals`, `fleek digest`, `fleek summary` | What waits for whom, near misses worth a call, a summary per deal |
 
 **A five-minute demo:** `fleek live` → Next, Next → Claude Haiku → Start → Run. Show (1) the
 matching funnel in Fleek's column, (2) each side's own secret and private price checks, (3) the
-approval: the buyer and an account manager say yes, (4) the metrics. Then pick the Depop buyer:
-a different seller wins on rating and dispatch.
+approval: the buyer and an account manager say yes, (4) the metrics. Then New session, the
+scripted agents and the Depop buyer: a different seller wins on rating and dispatch (the Claude
+recording covers the ready-made buyer only).
 
 ## 1. Information flow: who knows what
 
