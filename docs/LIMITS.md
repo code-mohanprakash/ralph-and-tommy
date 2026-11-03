@@ -108,9 +108,11 @@ recordings).
 - **One process and SQLite.** Concurrency is tested with threads (10 at once), not with many
   machines. [SCALE_AND_ROLLOUT.md](SCALE_AND_ROLLOUT.md) says what changes.
 - **No sign-in.** Anyone who can run `fleek approve` can approve a deal.
-- **Two settings in `market.toml` aren't backed by evidence yet.** Deals of £1,000 or more go to
-  Sonnet 5.5, though Sonnet did no better than Haiku on the 10 buyers measured; and a digest model
-  is named, but the digest is plain code and calls no model.
+- **Two settings in `market.toml` do nothing yet.** `[models]` names Sonnet 5.5 for deals of
+  £1,000 or more; `llm/routing.py` implements it and `tests/test_llm_client.py` tests it, but no
+  command calls it, so every run uses the model you pick (and Sonnet did no better than Haiku on
+  the 10 buyers measured). A digest model is named too, but the digest is plain code and calls no
+  model.
 - **Payments, shipping, disputes and returns** are Fleek's existing systems and aren't modelled.
 
 ## Words I don't use about this

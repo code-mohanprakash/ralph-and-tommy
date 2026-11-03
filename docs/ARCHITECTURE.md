@@ -105,7 +105,7 @@ the log rebuilds each negotiation exactly; the saved state is checked against a 
 | `store` | SQLite: append-only events, snapshots, stock and the atomic accept, pairings, who was asked to approve, offers sent to buyers who walked away |
 | `orchestrator` | Opening (cooldown, 3 tries per lot), rounds and the clock, the turn-by-turn runner, approval by buyer, seller or account manager, stop and hand over (`controls.py`), offers to buyers who walked away (`offers.py`) |
 | `harness` | The tool loop, strict schemas, the agents' tools, escalation to a person, the quarantined listing reader and blind mode (`reader.py`) |
-| `llm` | The Claude client, model routing, spend caps, record and replay |
+| `llm` | The Claude client, spend caps, record and replay, and a deal-size model router that no command uses yet |
 | `agents` | The AI side: the `Agent` interface, Claude Ralph and Tommy, their prompts, picking 3 lots, re-ranking the top 5 with a reason for each (`rerank.py`) |
 | `scripted` | **No AI.** Ralph and Tommy as plain rules, for tests, CI and the bench: free, the same every run, no key needed. Two Ralph styles (best offer; holding, which the Deal Room uses) and two Tommy styles (thirds, Boulware). Import contracts keep them apart: they never import the vault, and the Claude agent never imports them |
 | `humans` | What account managers read: the near-miss call list, the watch list from the monitors, and the summary written whenever a person is needed |

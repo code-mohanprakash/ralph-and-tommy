@@ -18,7 +18,8 @@ cooldown_hours = 24
 tries_per_buyer_per_lot = 3
 
 [models]
-# Deals worth this much or more (whole pence) get the stronger model.
+# Not wired in yet: llm/routing.py reads these, but every command uses the model you pick.
+# Deals worth this much or more (whole pence) would get the stronger model.
 big_deal_pence = 100000
 big_deal_model = "claude-sonnet-5-5"
 small_deal_model = "claude-haiku-5-5"
