@@ -27,8 +27,9 @@ uv run fleek negotiate --mock --buyer buyer-0002
   Claude Tommy tried to counter below his floor, the harness refused to send it.
 - **`fleek negotiate --mock`** takes one buyer from the seeded market through matching and a
   negotiation with scripted agents, and shows what each side would pay and receive after Fleek's
-  fees (buyer-0002 closes at £6.95 a piece; buyer-0001 shows a negotiation that ends with no
-  deal). The first run downloads a 64 MB local embedding model; add `--matcher words` to skip it.
+  fees (buyer-0002 closes at £6.95 a piece, buyer-0001 at £5.00). For deals that end with no
+  deal, the Deal Room's "A near miss" and "No price can work" buttons show both kinds. The first
+  run downloads a 64 MB local embedding model; add `--matcher words` to skip it.
 
 More:
 
